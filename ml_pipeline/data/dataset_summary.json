@@ -1,0 +1,58 @@
+{
+  "total_children": 600,
+  "children_per_category": {
+    "green": 200,
+    "amber": 200,
+    "red": 200
+  },
+  "total_sessions": 42704,
+  "sessions_per_child": 8,
+  "games_covered": [
+    "catcher",
+    "memory",
+    "shapes",
+    "sound",
+    "leader",
+    "counting",
+    "emotion",
+    "simon",
+    "maze",
+    "category"
+  ],
+  "age_distribution": {
+    "2": 81,
+    "6": 77,
+    "1": 76,
+    "4": 76,
+    "5": 75,
+    "3": 74,
+    "7": 73,
+    "8": 68
+  },
+  "feature_statistics": {
+    "avg_accuracy": {
+      "mean": 66.03,
+      "std": 24.81,
+      "min": 27.36,
+      "max": 99.7
+    },
+    "avg_reaction_time": {
+      "mean": 1863.72,
+      "std": 838.72,
+      "min": 671.16,
+      "max": 3655.62
+    },
+    "avg_hesitation": {
+      "mean": 4.69,
+      "std": 3.8,
+      "min": 0.15,
+      "max": 11.01
+    },
+    "avg_engagement": {
+      "mean": 58.53,
+      "std": 22.51,
+      "min": 29.68,
+      "max": 87.65
+    }
+  }
+}

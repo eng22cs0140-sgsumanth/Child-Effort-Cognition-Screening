@@ -1,0 +1,152 @@
+{
+  "catcher": {
+    "name": "Reaction Time Catcher",
+    "badge": "Attention",
+    "age_range": [
+      0,
+      9
+    ],
+    "session_duration_seconds": 30,
+    "min_items_per_session": 10,
+    "max_items_per_session": 25,
+    "typical_reaction_time_range_ms": [
+      300,
+      700
+    ]
+  },
+  "memory": {
+    "name": "Pattern Memory Match",
+    "badge": "Cognitive",
+    "age_range": [
+      2,
+      9
+    ],
+    "session_duration_seconds": 90,
+    "min_items_per_session": 5,
+    "max_items_per_session": 15,
+    "typical_reaction_time_range_ms": [
+      500,
+      1200
+    ]
+  },
+  "shapes": {
+    "name": "Shape Sorter Challenge",
+    "badge": "Cognitive",
+    "age_range": [
+      0,
+      6
+    ],
+    "session_duration_seconds": 60,
+    "min_items_per_session": 8,
+    "max_items_per_session": 20,
+    "typical_reaction_time_range_ms": [
+      600,
+      1500
+    ]
+  },
+  "sound": {
+    "name": "Sound & Word Games",
+    "badge": "Language",
+    "age_range": [
+      1,
+      9
+    ],
+    "session_duration_seconds": 75,
+    "min_items_per_session": 6,
+    "max_items_per_session": 15,
+    "typical_reaction_time_range_ms": [
+      800,
+      2000
+    ]
+  },
+  "leader": {
+    "name": "Follow the Leader",
+    "badge": "Social",
+    "age_range": [
+      0,
+      9
+    ],
+    "session_duration_seconds": 45,
+    "min_items_per_session": 4,
+    "max_items_per_session": 8,
+    "typical_reaction_time_range_ms": [
+      400,
+      1000
+    ]
+  },
+  "counting": {
+    "name": "Counting Garden",
+    "badge": "Cognitive",
+    "age_range": [
+      1,
+      7
+    ],
+    "session_duration_seconds": 60,
+    "min_items_per_session": 5,
+    "max_items_per_session": 12,
+    "typical_reaction_time_range_ms": [
+      700,
+      1800
+    ]
+  },
+  "emotion": {
+    "name": "Emotion Detective",
+    "badge": "Social",
+    "age_range": [
+      2,
+      9
+    ],
+    "session_duration_seconds": 70,
+    "min_items_per_session": 6,
+    "max_items_per_session": 12,
+    "typical_reaction_time_range_ms": [
+      600,
+      1500
+    ]
+  },
+  "simon": {
+    "name": "Simon Says Musical",
+    "badge": "Attention",
+    "age_range": [
+      2,
+      9
+    ],
+    "session_duration_seconds": 50,
+    "min_items_per_session": 5,
+    "max_items_per_session": 10,
+    "typical_reaction_time_range_ms": [
+      500,
+      1200
+    ]
+  },
+  "maze": {
+    "name": "Color Trail Maze",
+    "badge": "Cognitive",
+    "age_range": [
+      1,
+      7
+    ],
+    "session_duration_seconds": 90,
+    "min_items_per_session": 8,
+    "max_items_per_session": 20,
+    "typical_reaction_time_range_ms": [
+      400,
+      1000
+    ]
+  },
+  "category": {
+    "name": "Category Sort Game",
+    "badge": "Attention",
+    "age_range": [
+      3,
+      9
+    ],
+    "session_duration_seconds": 60,
+    "min_items_per_session": 8,
+    "max_items_per_session": 16,
+    "typical_reaction_time_range_ms": [
+      600,
+      1400
+    ]
+  }
+}

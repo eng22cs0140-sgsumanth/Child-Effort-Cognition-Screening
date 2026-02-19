@@ -1,0 +1,4391 @@
+{
+  "typical_development": [
+    {
+      "gameId": "catcher",
+      "score": 85.0,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          452.4,
+          532.9,
+          428.0,
+          449.5,
+          432.0,
+          473.2,
+          480.3,
+          487.6,
+          483.5,
+          460.7,
+          435.1,
+          431.2,
+          302.7,
+          487.0,
+          453.1,
+          483.0,
+          600.0,
+          467.1,
+          418.3,
+          459.0,
+          644.9,
+          381.0,
+          353.2,
+          602.5,
+          491.9
+        ],
+        "accuracy": 85.8,
+        "hesitationCount": 0,
+        "engagementScore": 83.0,
+        "correctAttempts": 21,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 467.6,
+        "reactionTimeVariability": 72.0
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 86.5,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          951.2,
+          586.3,
+          1734.6,
+          1032.5,
+          1070.1
+        ],
+        "accuracy": 88.5,
+        "hesitationCount": 2,
+        "engagementScore": 81.9,
+        "correctAttempts": 4,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1074.9,
+        "reactionTimeVariability": 371.8
+      }
+    },
+    {
+      "gameId": "shapes",
+      "score": 86.0,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          585.0,
+          919.7,
+          1077.3,
+          831.8,
+          775.8,
+          2283.7,
+          854.1,
+          1269.4,
+          951.1,
+          1087.2,
+          1002.8
+        ],
+        "accuracy": 88.0,
+        "hesitationCount": 2,
+        "engagementScore": 81.4,
+        "correctAttempts": 10,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1058.0,
+        "reactionTimeVariability": 424.0
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 89.4,
+      "timestamp": 1700172800000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          440.0,
+          448.3,
+          540.0,
+          489.6,
+          455.2,
+          565.1,
+          402.3,
+          421.2,
+          491.0,
+          524.8,
+          522.0,
+          452.6,
+          590.6,
+          509.4,
+          497.2,
+          565.7,
+          593.3,
+          478.9,
+          417.9,
+          504.8,
+          572.8,
+          533.4,
+          419.8,
+          308.6,
+          498.8
+        ],
+        "accuracy": 91.5,
+        "hesitationCount": 0,
+        "engagementScore": 84.5,
+        "correctAttempts": 23,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 489.7,
+        "reactionTimeVariability": 66.0
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 92.0,
+      "timestamp": 1700172800000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          792.7,
+          1048.6,
+          896.7,
+          1166.3,
+          725.4,
+          568.4
+        ],
+        "accuracy": 94.6,
+        "hesitationCount": 1,
+        "engagementScore": 86.0,
+        "correctAttempts": 6,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 866.3,
+        "reactionTimeVariability": 199.2
+      }
+    },
+    {
+      "gameId": "shapes",
+      "score": 92.6,
+      "timestamp": 1700172800000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1139.7,
+          891.8,
+          773.2,
+          1149.3,
+          852.9,
+          994.3,
+          1146.5,
+          1157.6,
+          651.3,
+          969.2,
+          1232.9,
+          942.7,
+          1179.5
+        ],
+        "accuracy": 95.6,
+        "hesitationCount": 0,
+        "engagementScore": 85.8,
+        "correctAttempts": 12,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1006.2,
+        "reactionTimeVariability": 172.0
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 94.7,
+      "timestamp": 1700259200000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          474.7,
+          395.1,
+          523.8,
+          427.8,
+          379.1,
+          388.6,
+          357.7,
+          569.0,
+          557.2,
+          376.2,
+          482.9,
+          635.2,
+          468.8,
+          326.8,
+          358.3,
+          511.7,
+          521.0,
+          486.0
+        ],
+        "accuracy": 98.7,
+        "hesitationCount": 0,
+        "engagementScore": 85.3,
+        "correctAttempts": 18,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 457.8,
+        "reactionTimeVariability": 83.8
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 91.6,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          843.4,
+          904.5,
+          814.5,
+          532.8,
+          723.8
+        ],
+        "accuracy": 95.0,
+        "hesitationCount": 0,
+        "engagementScore": 83.7,
+        "correctAttempts": 5,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 763.8,
+        "reactionTimeVariability": 129.4
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 95.1,
+      "timestamp": 1700259200000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          569.4,
+          870.7,
+          778.5,
+          1349.5,
+          494.4,
+          873.7,
+          836.9,
+          857.6,
+          888.3,
+          654.9,
+          817.1,
+          638.9,
+          1139.3,
+          863.4
+        ],
+        "accuracy": 99.3,
+        "hesitationCount": 1,
+        "engagementScore": 85.3,
+        "correctAttempts": 14,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 830.9,
+        "reactionTimeVariability": 211.3
+      }
+    },
+    {
+      "gameId": "shapes",
+      "score": 89.9,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1231.4,
+          786.7,
+          1118.9,
+          906.8,
+          1387.4,
+          931.3,
+          1101.5,
+          885.4,
+          1004.2,
+          1014.2,
+          839.8,
+          848.7,
+          650.2,
+          1083.6,
+          900.7,
+          819.5,
+          1113.7,
+          1201.7,
+          1223.0,
+          1007.5
+        ],
+        "accuracy": 92.9,
+        "hesitationCount": 0,
+        "engagementScore": 83.1,
+        "correctAttempts": 19,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1002.8,
+        "reactionTimeVariability": 176.6
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 93.9,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          384.4,
+          334.3,
+          430.5,
+          539.4,
+          484.7,
+          577.6,
+          552.9,
+          383.7,
+          485.6,
+          372.4,
+          408.2,
+          515.2,
+          512.7,
+          453.8,
+          409.0,
+          502.6,
+          392.7,
+          509.5
+        ],
+        "accuracy": 97.6,
+        "hesitationCount": 0,
+        "engagementScore": 85.1,
+        "correctAttempts": 18,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 458.3,
+        "reactionTimeVariability": 69.0
+      }
+    },
+    {
+      "gameId": "shapes",
+      "score": 95.7,
+      "timestamp": 1700518400000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          907.5,
+          887.8,
+          1038.0,
+          975.3,
+          830.1,
+          934.9,
+          942.4,
+          974.1,
+          849.3,
+          1262.3,
+          705.9,
+          1400.3,
+          1047.4,
+          918.5,
+          979.8,
+          836.4,
+          1192.4,
+          1283.0
+        ],
+        "accuracy": 99.3,
+        "hesitationCount": 0,
+        "engagementScore": 87.3,
+        "correctAttempts": 18,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 998.1,
+        "reactionTimeVariability": 175.1
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 96.4,
+      "timestamp": 1700691200000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          573.6,
+          956.9,
+          808.3,
+          1373.8,
+          616.9,
+          795.9,
+          888.6,
+          899.7,
+          955.3,
+          857.5,
+          768.0,
+          616.1,
+          665.3
+        ],
+        "accuracy": 100.0,
+        "hesitationCount": 1,
+        "engagementScore": 88.1,
+        "correctAttempts": 13,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 828.9,
+        "reactionTimeVariability": 201.2
+      }
+    },
+    {
+      "gameId": "shapes",
+      "score": 96.6,
+      "timestamp": 1700691200000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1075.3,
+          1342.4,
+          684.6,
+          632.9,
+          1131.0,
+          1003.4,
+          874.8,
+          1249.4,
+          825.9,
+          986.1,
+          640.0,
+          1093.9,
+          1116.8,
+          1050.0,
+          846.2
+        ],
+        "accuracy": 99.8,
+        "hesitationCount": 0,
+        "engagementScore": 89.3,
+        "correctAttempts": 15,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 970.2,
+        "reactionTimeVariability": 207.8
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 96.3,
+      "timestamp": 1701036800000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          515.1,
+          519.4,
+          462.2,
+          530.1,
+          474.8,
+          524.6,
+          406.5,
+          490.8,
+          431.7,
+          529.2,
+          513.1,
+          683.9,
+          350.4,
+          388.1,
+          367.9,
+          454.4,
+          434.4,
+          491.6,
+          472.8,
+          455.2,
+          415.6,
+          397.5,
+          313.0,
+          435.7
+        ],
+        "accuracy": 100.0,
+        "hesitationCount": 0,
+        "engagementScore": 87.7,
+        "correctAttempts": 24,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 460.7,
+        "reactionTimeVariability": 74.7
+      }
+    }
+  ],
+  "improving_child": [
+    {
+      "gameId": "catcher",
+      "score": 52.0,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1345.9,
+          611.3,
+          817.0,
+          724.5,
+          645.7,
+          723.4,
+          673.3,
+          607.2,
+          685.9,
+          1012.2,
+          680.3,
+          568.9,
+          755.3,
+          798.1,
+          598.9,
+          610.0,
+          602.9,
+          790.7,
+          619.4,
+          686.7,
+          550.1
+        ],
+        "accuracy": 51.2,
+        "hesitationCount": 3,
+        "engagementScore": 53.7,
+        "correctAttempts": 11,
+        "incorrectAttempts": 10,
+        "averageReactionTime": 719.4,
+        "reactionTimeVariability": 174.2
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 63.9,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1800.1,
+          2472.5,
+          901.7,
+          3348.0,
+          3860.5,
+          3086.1,
+          1252.0,
+          931.5,
+          2785.4,
+          1688.9,
+          1420.4
+        ],
+        "accuracy": 67.2,
+        "hesitationCount": 6,
+        "engagementScore": 56.3,
+        "correctAttempts": 7,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 2140.6,
+        "reactionTimeVariability": 975.2
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 61.5,
+      "timestamp": 1700086400000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          675.1,
+          697.3,
+          1139.6,
+          1384.2,
+          885.1,
+          1535.8,
+          540.1,
+          844.7,
+          726.9,
+          593.1,
+          909.5
+        ],
+        "accuracy": 61.6,
+        "hesitationCount": 4,
+        "engagementScore": 61.4,
+        "correctAttempts": 7,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 902.9,
+        "reactionTimeVariability": 308.2
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 69.2,
+      "timestamp": 1700172800000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          615.6,
+          1449.3,
+          717.2,
+          798.0,
+          661.9,
+          702.4,
+          866.5,
+          597.3,
+          737.6,
+          680.1,
+          1212.9,
+          1450.4,
+          718.1,
+          1732.7,
+          792.5,
+          971.8,
+          700.5,
+          712.4,
+          760.4,
+          678.9,
+          743.0
+        ],
+        "accuracy": 73.1,
+        "hesitationCount": 8,
+        "engagementScore": 60.0,
+        "correctAttempts": 15,
+        "incorrectAttempts": 6,
+        "averageReactionTime": 871.4,
+        "reactionTimeVariability": 307.4
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 60.5,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2358.7,
+          3726.0,
+          3087.6,
+          941.8,
+          1355.2,
+          3374.2,
+          925.7,
+          2470.3
+        ],
+        "accuracy": 66.0,
+        "hesitationCount": 6,
+        "engagementScore": 47.7,
+        "correctAttempts": 5,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 2279.9,
+        "reactionTimeVariability": 1028.5
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 63.7,
+      "timestamp": 1700259200000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2122.6,
+          1214.0,
+          1346.0,
+          1438.7,
+          1646.8,
+          1307.7
+        ],
+        "accuracy": 69.0,
+        "hesitationCount": 3,
+        "engagementScore": 51.3,
+        "correctAttempts": 4,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 1512.6,
+        "reactionTimeVariability": 304.0
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 60.2,
+      "timestamp": 1700345600000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2479.4,
+          2939.6,
+          1398.2,
+          2457.5,
+          4397.8,
+          1415.1,
+          2037.4,
+          2750.5,
+          1537.8,
+          1722.7
+        ],
+        "accuracy": 60.5,
+        "hesitationCount": 5,
+        "engagementScore": 59.7,
+        "correctAttempts": 6,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 2313.6,
+        "reactionTimeVariability": 874.5
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 62.9,
+      "timestamp": 1700518400000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1661.4,
+          1374.6,
+          733.1,
+          1176.4,
+          1334.4,
+          916.4,
+          1064.3,
+          1548.8,
+          1063.3,
+          1610.1,
+          1254.5,
+          695.4
+        ],
+        "accuracy": 68.2,
+        "hesitationCount": 8,
+        "engagementScore": 50.5,
+        "correctAttempts": 8,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 1202.7,
+        "reactionTimeVariability": 308.9
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 64.5,
+      "timestamp": 1700518400000,
+      "sessionNumber": 7,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1698.7,
+          1903.3,
+          2077.4,
+          753.1,
+          1306.7,
+          801.1,
+          462.8,
+          574.8,
+          1060.1,
+          835.9,
+          737.4,
+          718.6,
+          636.6
+        ],
+        "accuracy": 84.6,
+        "hesitationCount": 4,
+        "engagementScore": 62.7,
+        "correctAttempts": 9,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 1043.6,
+        "reactionTimeVariability": 512.5
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 66.3,
+      "timestamp": 1700691200000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          720.9,
+          560.8,
+          553.7,
+          834.0,
+          828.8,
+          825.6,
+          899.0,
+          687.9,
+          1139.3,
+          664.6,
+          856.0,
+          770.8,
+          716.6,
+          545.2,
+          1217.4,
+          671.3,
+          669.4,
+          666.9,
+          731.6,
+          790.2,
+          708.5,
+          743.1,
+          537.2
+        ],
+        "accuracy": 83.8,
+        "hesitationCount": 4,
+        "engagementScore": 70.4,
+        "correctAttempts": 16,
+        "incorrectAttempts": 7,
+        "averageReactionTime": 753.9,
+        "reactionTimeVariability": 164.3
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 63.3,
+      "timestamp": 1700691200000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1317.4,
+          1592.4,
+          1506.5,
+          1343.9,
+          1571.3,
+          1362.8,
+          1290.0,
+          1349.0,
+          1247.5,
+          1537.5,
+          1505.1,
+          923.0
+        ],
+        "accuracy": 79.5,
+        "hesitationCount": 0,
+        "engagementScore": 70.7,
+        "correctAttempts": 8,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 1378.9,
+        "reactionTimeVariability": 177.7
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 61.8,
+      "timestamp": 1701036800000,
+      "sessionNumber": 7,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2411.0,
+          2202.5,
+          3033.3,
+          2097.3,
+          1551.9,
+          1906.7,
+          1349.8,
+          3499.4
+        ],
+        "accuracy": 82.1,
+        "hesitationCount": 6,
+        "engagementScore": 59.4,
+        "correctAttempts": 5,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 2256.5,
+        "reactionTimeVariability": 674.7
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 58.9,
+      "timestamp": 1701296000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          826.9,
+          1023.5,
+          513.5,
+          769.4,
+          1341.7,
+          778.4,
+          639.9,
+          524.4,
+          611.9,
+          554.7,
+          611.7,
+          1475.1,
+          747.6,
+          1215.8,
+          744.7,
+          810.3,
+          584.1,
+          821.9,
+          653.7
+        ],
+        "accuracy": 76.7,
+        "hesitationCount": 5,
+        "engagementScore": 62.4,
+        "correctAttempts": 12,
+        "incorrectAttempts": 7,
+        "averageReactionTime": 802.6,
+        "reactionTimeVariability": 267.9
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 59.5,
+      "timestamp": 1701296000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          913.1,
+          2993.3,
+          1754.5,
+          3076.2,
+          1887.8,
+          2941.4,
+          1903.4,
+          1551.6,
+          1219.2,
+          3357.3,
+          1483.4,
+          1420.5
+        ],
+        "accuracy": 75.4,
+        "hesitationCount": 5,
+        "engagementScore": 67.2,
+        "correctAttempts": 7,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 2041.8,
+        "reactionTimeVariability": 792.1
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 60.5,
+      "timestamp": 1701814400000,
+      "sessionNumber": 8,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          837.7,
+          744.2,
+          716.6,
+          579.7,
+          722.6,
+          747.7,
+          720.3,
+          713.5,
+          638.7,
+          528.6,
+          773.1,
+          859.6,
+          928.7,
+          609.0,
+          739.2,
+          884.7,
+          637.5
+        ],
+        "accuracy": 79.5,
+        "hesitationCount": 2,
+        "engagementScore": 61.2,
+        "correctAttempts": 11,
+        "incorrectAttempts": 6,
+        "averageReactionTime": 728.3,
+        "reactionTimeVariability": 105.6
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 58.7,
+      "timestamp": 1701814400000,
+      "sessionNumber": 8,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2401.7,
+          2696.1,
+          1197.2,
+          2635.8,
+          1922.7,
+          2443.7,
+          1239.3,
+          1391.4,
+          1942.6,
+          1993.2
+        ],
+        "accuracy": 74.5,
+        "hesitationCount": 4,
+        "engagementScore": 66.8,
+        "correctAttempts": 6,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 1986.4,
+        "reactionTimeVariability": 533.7
+      }
+    }
+  ],
+  "persistent_difficulty": [
+    {
+      "gameId": "catcher",
+      "score": 40.1,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1711.9,
+          838.0,
+          1581.7,
+          597.6,
+          543.0,
+          1973.3,
+          1694.5,
+          1662.2,
+          2257.3,
+          874.4,
+          1083.2,
+          706.7,
+          821.4,
+          667.8,
+          678.7
+        ],
+        "accuracy": 37.0,
+        "hesitationCount": 5,
+        "engagementScore": 47.2,
+        "correctAttempts": 6,
+        "incorrectAttempts": 9,
+        "averageReactionTime": 1179.4,
+        "reactionTimeVariability": 551.5
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 58.3,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2822.1,
+          2147.3,
+          3012.3,
+          2049.3,
+          2140.8,
+          1636.5,
+          1188.2
+        ],
+        "accuracy": 69.2,
+        "hesitationCount": 7,
+        "engagementScore": 32.9,
+        "correctAttempts": 5,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 2142.4,
+        "reactionTimeVariability": 584.8
+      }
+    },
+    {
+      "gameId": "counting",
+      "score": 38.6,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2421.6,
+          1697.5,
+          3197.0,
+          4134.6,
+          4221.1,
+          2265.6,
+          1746.4,
+          1864.3,
+          3752.5
+        ],
+        "accuracy": 42.5,
+        "hesitationCount": 6,
+        "engagementScore": 29.6,
+        "correctAttempts": 4,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 2811.2,
+        "reactionTimeVariability": 971.5
+      }
+    },
+    {
+      "gameId": "counting",
+      "score": 34.8,
+      "timestamp": 1700172800000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1755.7,
+          3791.7,
+          2024.3,
+          4459.5,
+          3559.0,
+          5463.3,
+          3500.6,
+          2667.3,
+          1862.3,
+          1997.0,
+          2656.1
+        ],
+        "accuracy": 34.7,
+        "hesitationCount": 6,
+        "engagementScore": 35.2,
+        "correctAttempts": 4,
+        "incorrectAttempts": 7,
+        "averageReactionTime": 3067.0,
+        "reactionTimeVariability": 1142.9
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 44.8,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1502.1,
+          1678.4,
+          873.8,
+          1277.4,
+          1466.7,
+          1490.2,
+          1597.6,
+          1189.8,
+          1831.4,
+          1650.9,
+          1371.2
+        ],
+        "accuracy": 50.8,
+        "hesitationCount": 8,
+        "engagementScore": 30.7,
+        "correctAttempts": 6,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 1448.1,
+        "reactionTimeVariability": 252.3
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 35.6,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2680.9,
+          2612.8,
+          1630.4,
+          1714.4,
+          2619.2,
+          2078.8
+        ],
+        "accuracy": 37.0,
+        "hesitationCount": 11,
+        "engagementScore": 32.4,
+        "correctAttempts": 2,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 2222.7,
+        "reactionTimeVariability": 437.7
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 46.7,
+      "timestamp": 1700259200000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1332.4,
+          1978.3,
+          2282.8,
+          2720.3,
+          3138.1,
+          1395.0,
+          1500.3,
+          1060.6,
+          1574.7,
+          1315.4,
+          3076.6,
+          1211.3,
+          782.0,
+          1357.0
+        ],
+        "accuracy": 50.8,
+        "hesitationCount": 8,
+        "engagementScore": 37.1,
+        "correctAttempts": 7,
+        "incorrectAttempts": 7,
+        "averageReactionTime": 1766.0,
+        "reactionTimeVariability": 727.0
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 37.0,
+      "timestamp": 1700345600000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2440.1,
+          2306.4,
+          2529.8,
+          1811.2,
+          1892.8,
+          3850.5,
+          2331.4
+        ],
+        "accuracy": 37.2,
+        "hesitationCount": 11,
+        "engagementScore": 36.7,
+        "correctAttempts": 3,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 2451.7,
+        "reactionTimeVariability": 623.5
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 42.3,
+      "timestamp": 1700432000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          3013.0,
+          1214.2,
+          2970.3,
+          2185.9,
+          944.2,
+          1497.3,
+          1540.6,
+          2722.4,
+          1188.2,
+          2644.5,
+          2331.3,
+          1251.0,
+          3504.3,
+          1464.6
+        ],
+        "accuracy": 42.7,
+        "hesitationCount": 7,
+        "engagementScore": 41.3,
+        "correctAttempts": 6,
+        "incorrectAttempts": 8,
+        "averageReactionTime": 2033.7,
+        "reactionTimeVariability": 801.7
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 40.6,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1669.4,
+          833.2,
+          1590.8,
+          1347.8,
+          809.2,
+          1389.6,
+          2214.8,
+          1724.7,
+          2033.8,
+          729.2,
+          792.3,
+          781.0,
+          709.7,
+          1930.3,
+          805.8,
+          1378.8,
+          791.8,
+          1312.7,
+          1606.0,
+          735.6,
+          919.9
+        ],
+        "accuracy": 44.6,
+        "hesitationCount": 13,
+        "engagementScore": 31.2,
+        "correctAttempts": 9,
+        "incorrectAttempts": 12,
+        "averageReactionTime": 1243.1,
+        "reactionTimeVariability": 480.2
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 36.5,
+      "timestamp": 1700518400000,
+      "sessionNumber": 7,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1380.7,
+          1161.5,
+          635.9,
+          820.4,
+          1975.3,
+          1440.7,
+          2036.6,
+          2346.0,
+          1769.7,
+          1263.2,
+          1436.6,
+          697.6,
+          1662.8,
+          899.2,
+          1787.7,
+          1245.4,
+          882.8,
+          705.7
+        ],
+        "accuracy": 37.7,
+        "hesitationCount": 12,
+        "engagementScore": 33.7,
+        "correctAttempts": 7,
+        "incorrectAttempts": 11,
+        "averageReactionTime": 1341.5,
+        "reactionTimeVariability": 496.8
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 38.8,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2061.2,
+          2404.5,
+          2700.1,
+          3475.0,
+          2285.8
+        ],
+        "accuracy": 38.1,
+        "hesitationCount": 10,
+        "engagementScore": 40.4,
+        "correctAttempts": 2,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 2585.3,
+        "reactionTimeVariability": 490.3
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 33.4,
+      "timestamp": 1700518400000,
+      "sessionNumber": 7,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2393.0,
+          2737.5,
+          2889.7,
+          2106.1,
+          1894.3
+        ],
+        "accuracy": 35.3,
+        "hesitationCount": 11,
+        "engagementScore": 29.1,
+        "correctAttempts": 2,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 2404.1,
+        "reactionTimeVariability": 373.0
+      }
+    },
+    {
+      "gameId": "counting",
+      "score": 36.5,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          3561.3,
+          4565.3,
+          1973.3,
+          4015.9,
+          2950.5,
+          3519.2,
+          5234.2,
+          1537.0,
+          4926.8,
+          3198.8
+        ],
+        "accuracy": 46.8,
+        "hesitationCount": 8,
+        "engagementScore": 12.4,
+        "correctAttempts": 5,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 3548.2,
+        "reactionTimeVariability": 1140.3
+      }
+    },
+    {
+      "gameId": "counting",
+      "score": 38.1,
+      "timestamp": 1700518400000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          3450.0,
+          3529.4,
+          3900.5,
+          2238.6,
+          3579.1,
+          3534.3,
+          2400.1,
+          4645.9,
+          3801.5,
+          3390.1
+        ],
+        "accuracy": 43.9,
+        "hesitationCount": 8,
+        "engagementScore": 24.5,
+        "correctAttempts": 4,
+        "incorrectAttempts": 6,
+        "averageReactionTime": 3446.9,
+        "reactionTimeVariability": 660.3
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 34.9,
+      "timestamp": 1700604800000,
+      "sessionNumber": 8,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          3750.0,
+          1945.6,
+          2673.6,
+          3930.5,
+          1880.0,
+          3636.5,
+          3007.4,
+          2125.0
+        ],
+        "accuracy": 40.6,
+        "hesitationCount": 13,
+        "engagementScore": 21.7,
+        "correctAttempts": 3,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 2868.6,
+        "reactionTimeVariability": 785.3
+      }
+    },
+    {
+      "gameId": "counting",
+      "score": 36.3,
+      "timestamp": 1700691200000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          4962.2,
+          3794.6,
+          4224.5,
+          3957.0,
+          3924.4,
+          3923.2,
+          3502.7,
+          3912.0,
+          5034.0,
+          2986.0,
+          4914.7
+        ],
+        "accuracy": 33.9,
+        "hesitationCount": 10,
+        "engagementScore": 42.0,
+        "correctAttempts": 4,
+        "incorrectAttempts": 7,
+        "averageReactionTime": 4103.2,
+        "reactionTimeVariability": 610.8
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 30.8,
+      "timestamp": 1700777600000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          701.2,
+          714.9,
+          1051.3,
+          799.0,
+          944.8,
+          709.6,
+          360.1,
+          1137.8,
+          545.0,
+          864.3,
+          1015.3,
+          645.5,
+          456.2,
+          975.8,
+          830.4,
+          1153.3,
+          754.4,
+          583.0,
+          857.8,
+          623.9,
+          944.8,
+          985.4,
+          777.9
+        ],
+        "accuracy": 29.0,
+        "hesitationCount": 8,
+        "engagementScore": 34.9,
+        "correctAttempts": 7,
+        "incorrectAttempts": 16,
+        "averageReactionTime": 801.4,
+        "reactionTimeVariability": 205.4
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 39.2,
+      "timestamp": 1701036800000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1072.6,
+          1407.1,
+          785.0,
+          643.8,
+          1814.6,
+          2239.6,
+          860.1,
+          761.5,
+          1448.8,
+          983.2,
+          982.6,
+          722.3,
+          1056.1,
+          577.6,
+          1379.2
+        ],
+        "accuracy": 41.0,
+        "hesitationCount": 8,
+        "engagementScore": 35.2,
+        "correctAttempts": 6,
+        "incorrectAttempts": 9,
+        "averageReactionTime": 1115.6,
+        "reactionTimeVariability": 449.0
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 24.8,
+      "timestamp": 1701296000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1812.4,
+          568.0,
+          706.0,
+          604.7,
+          616.9,
+          653.6,
+          784.7,
+          1471.4,
+          866.6,
+          1605.8,
+          383.1,
+          731.7,
+          1106.1,
+          1601.7,
+          967.9,
+          1805.3,
+          521.6,
+          639.5,
+          682.8,
+          1472.0,
+          718.8,
+          1660.0
+        ],
+        "accuracy": 23.8,
+        "hesitationCount": 11,
+        "engagementScore": 27.2,
+        "correctAttempts": 5,
+        "incorrectAttempts": 17,
+        "averageReactionTime": 999.1,
+        "reactionTimeVariability": 461.3
+      }
+    },
+    {
+      "gameId": "counting",
+      "score": 40.3,
+      "timestamp": 1701296000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          3137.3,
+          5803.7,
+          3314.8,
+          3575.4,
+          3601.0,
+          2851.5,
+          3974.3,
+          4054.2,
+          5696.7
+        ],
+        "accuracy": 42.7,
+        "hesitationCount": 15,
+        "engagementScore": 34.8,
+        "correctAttempts": 4,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 4001.0,
+        "reactionTimeVariability": 1000.4
+      }
+    },
+    {
+      "gameId": "counting",
+      "score": 41.0,
+      "timestamp": 1701555200000,
+      "sessionNumber": 7,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          3079.2,
+          4338.4,
+          3791.6,
+          3644.6,
+          5418.4,
+          4883.9,
+          3491.3,
+          3151.6,
+          3626.1,
+          3421.2,
+          3763.4,
+          5302.2
+        ],
+        "accuracy": 42.4,
+        "hesitationCount": 12,
+        "engagementScore": 37.8,
+        "correctAttempts": 5,
+        "incorrectAttempts": 7,
+        "averageReactionTime": 3992.7,
+        "reactionTimeVariability": 770.8
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 32.0,
+      "timestamp": 1701814400000,
+      "sessionNumber": 8,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1596.3,
+          822.4,
+          1610.4,
+          454.6,
+          2023.6,
+          856.9,
+          774.6,
+          979.0,
+          1461.4,
+          1178.2,
+          869.5,
+          1418.7,
+          1022.6,
+          1973.6,
+          676.5,
+          922.4,
+          1239.9,
+          660.5,
+          1127.2,
+          1055.7
+        ],
+        "accuracy": 26.8,
+        "hesitationCount": 9,
+        "engagementScore": 44.3,
+        "correctAttempts": 5,
+        "incorrectAttempts": 15,
+        "averageReactionTime": 1136.2,
+        "reactionTimeVariability": 418.0
+      }
+    },
+    {
+      "gameId": "counting",
+      "score": 43.3,
+      "timestamp": 1701814400000,
+      "sessionNumber": 8,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2262.4,
+          4695.3,
+          3550.5,
+          2477.4,
+          3444.0,
+          4231.8,
+          3216.7,
+          4229.9
+        ],
+        "accuracy": 44.4,
+        "hesitationCount": 12,
+        "engagementScore": 40.6,
+        "correctAttempts": 4,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 3513.5,
+        "reactionTimeVariability": 803.0
+      }
+    }
+  ],
+  "single_session": [
+    {
+      "gameId": "catcher",
+      "score": 54.6,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          853.5,
+          783.2,
+          637.4,
+          1534.0,
+          981.1,
+          870.7,
+          951.7,
+          1659.0,
+          1567.5,
+          933.0,
+          702.0,
+          691.5,
+          693.2,
+          794.4,
+          958.7,
+          716.2,
+          794.1,
+          802.8,
+          818.6,
+          742.5,
+          709.6,
+          1243.9
+        ],
+        "accuracy": 57.0,
+        "hesitationCount": 7,
+        "engagementScore": 48.9,
+        "correctAttempts": 13,
+        "incorrectAttempts": 9,
+        "averageReactionTime": 929.0,
+        "reactionTimeVariability": 292.4
+      }
+    }
+  ],
+  "high_variability": [
+    {
+      "gameId": "simon",
+      "score": 62.6,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1527.4,
+          2706.4,
+          2002.6,
+          3066.3,
+          2200.2,
+          2045.2,
+          2376.6,
+          2078.6,
+          1490.6
+        ],
+        "accuracy": 80.9,
+        "hesitationCount": 8,
+        "engagementScore": 81.5,
+        "correctAttempts": 5,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 2166.0,
+        "reactionTimeVariability": 478.5
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 67.9,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1501.6,
+          2166.6,
+          1595.6,
+          1652.4,
+          1091.8,
+          2473.2
+        ],
+        "accuracy": 46.599999999999994,
+        "hesitationCount": 4,
+        "engagementScore": 55.8,
+        "correctAttempts": 4,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 1746.9,
+        "reactionTimeVariability": 451.8
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 52.4,
+      "timestamp": 1700172800000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1734.3,
+          952.4,
+          1068.5,
+          1729.5,
+          1671.6,
+          906.8,
+          757.3,
+          2525.0,
+          974.8,
+          967.6
+        ],
+        "accuracy": 80.0,
+        "hesitationCount": 6,
+        "engagementScore": 49.8,
+        "correctAttempts": 6,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 1328.8,
+        "reactionTimeVariability": 533.2
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 73.0,
+      "timestamp": 1700172800000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1281.5,
+          816.7,
+          1029.4,
+          1016.8,
+          1029.4,
+          1243.8
+        ],
+        "accuracy": 62.599999999999994,
+        "hesitationCount": 0,
+        "engagementScore": 35.5,
+        "correctAttempts": 5,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1069.6,
+        "reactionTimeVariability": 155.6
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 66.5,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          967.2,
+          962.0,
+          1019.3,
+          603.4,
+          471.6
+        ],
+        "accuracy": 92.6,
+        "hesitationCount": 1,
+        "engagementScore": 67.4,
+        "correctAttempts": 4,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 804.7,
+        "reactionTimeVariability": 223.0
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 62.7,
+      "timestamp": 1700259200000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1474.8,
+          1671.9,
+          2293.6,
+          1081.8,
+          1933.9,
+          1869.6
+        ],
+        "accuracy": 44.099999999999994,
+        "hesitationCount": 4,
+        "engagementScore": 44.3,
+        "correctAttempts": 4,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 1720.9,
+        "reactionTimeVariability": 380.1
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 59.3,
+      "timestamp": 1700345600000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1828.5,
+          2144.4,
+          1651.8,
+          2745.5,
+          2163.3,
+          2236.3,
+          2579.9,
+          1486.2
+        ],
+        "accuracy": 81.9,
+        "hesitationCount": 9,
+        "engagementScore": 68.2,
+        "correctAttempts": 5,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 2104.5,
+        "reactionTimeVariability": 406.6
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 57.0,
+      "timestamp": 1700345600000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1942.2,
+          1673.3,
+          2353.7,
+          1921.6,
+          1718.5,
+          1954.9,
+          2598.5
+        ],
+        "accuracy": 38.0,
+        "hesitationCount": 7,
+        "engagementScore": 39.5,
+        "correctAttempts": 4,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 2023.2,
+        "reactionTimeVariability": 311.0
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 77.5,
+      "timestamp": 1700432000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1730.6,
+          2409.1,
+          925.4,
+          2515.7,
+          1843.6
+        ],
+        "accuracy": 100,
+        "hesitationCount": 6,
+        "engagementScore": 77.0,
+        "correctAttempts": 4,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1884.9,
+        "reactionTimeVariability": 569.0
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 67.3,
+      "timestamp": 1700518400000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2141.4,
+          1871.5,
+          3087.3,
+          776.4,
+          1309.1,
+          1495.1,
+          892.7,
+          1933.3
+        ],
+        "accuracy": 50.7,
+        "hesitationCount": 6,
+        "engagementScore": 44.5,
+        "correctAttempts": 6,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 1688.3,
+        "reactionTimeVariability": 698.4
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 56.5,
+      "timestamp": 1701036800000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1701.4,
+          2249.7,
+          1879.0,
+          893.6,
+          2725.1,
+          2374.9
+        ],
+        "accuracy": 76.3,
+        "hesitationCount": 4,
+        "engagementScore": 72.1,
+        "correctAttempts": 3,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 1970.6,
+        "reactionTimeVariability": 584.7
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 54.9,
+      "timestamp": 1701296000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1064.1,
+          1273.2,
+          1385.2,
+          1457.7,
+          1145.6,
+          788.6,
+          1345.0,
+          1021.4
+        ],
+        "accuracy": 36.6,
+        "hesitationCount": 0,
+        "engagementScore": 35.8,
+        "correctAttempts": 5,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 1185.1,
+        "reactionTimeVariability": 208.5
+      }
+    }
+  ],
+  "very_young_typical": [
+    {
+      "gameId": "catcher",
+      "score": 81.5,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          562.9,
+          621.6,
+          912.5,
+          774.8,
+          649.0,
+          557.1,
+          554.1,
+          576.6,
+          636.4,
+          663.1,
+          1208.1,
+          581.8,
+          609.3,
+          692.7,
+          578.6,
+          472.6,
+          655.9,
+          467.6,
+          1298.1,
+          685.9,
+          603.6
+        ],
+        "accuracy": 80.6,
+        "hesitationCount": 2,
+        "engagementScore": 83.7,
+        "correctAttempts": 17,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 683.9,
+        "reactionTimeVariability": 207.6
+      }
+    },
+    {
+      "gameId": "shapes",
+      "score": 81.4,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1191.4,
+          1237.2,
+          2751.1,
+          1627.2,
+          1312.7,
+          1254.8,
+          1355.0,
+          1449.6,
+          1424.6,
+          1330.8,
+          1169.4,
+          1248.8,
+          1192.0
+        ],
+        "accuracy": 80.5,
+        "hesitationCount": 3,
+        "engagementScore": 83.5,
+        "correctAttempts": 10,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 1426.5,
+        "reactionTimeVariability": 401.5
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 80.6,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          927.0,
+          956.4,
+          949.1,
+          889.2
+        ],
+        "accuracy": 80.5,
+        "hesitationCount": 0,
+        "engagementScore": 81.0,
+        "correctAttempts": 3,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 930.4,
+        "reactionTimeVariability": 26.2
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 84.3,
+      "timestamp": 1700086400000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          565.0,
+          698.8,
+          602.9,
+          1038.3,
+          643.8,
+          557.2,
+          585.8,
+          417.7,
+          575.0,
+          502.0,
+          569.9,
+          712.9,
+          492.9,
+          599.0,
+          761.3,
+          645.5,
+          603.4,
+          647.4,
+          632.9,
+          594.4
+        ],
+        "accuracy": 84.6,
+        "hesitationCount": 2,
+        "engagementScore": 83.6,
+        "correctAttempts": 17,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 622.3,
+        "reactionTimeVariability": 121.9
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 85.5,
+      "timestamp": 1700172800000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          880.4,
+          810.7,
+          722.0,
+          904.8,
+          1044.9,
+          921.7
+        ],
+        "accuracy": 86.4,
+        "hesitationCount": 0,
+        "engagementScore": 83.4,
+        "correctAttempts": 5,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 880.8,
+        "reactionTimeVariability": 99.4
+      }
+    },
+    {
+      "gameId": "shapes",
+      "score": 84.5,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1617.7,
+          1100.1,
+          1290.0,
+          1258.6,
+          1374.2,
+          1024.1,
+          1636.4,
+          1516.8,
+          1287.3
+        ],
+        "accuracy": 84.9,
+        "hesitationCount": 0,
+        "engagementScore": 83.4,
+        "correctAttempts": 8,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1345.0,
+        "reactionTimeVariability": 201.8
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 87.6,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          485.1,
+          694.9,
+          581.6,
+          607.7,
+          529.6,
+          632.9,
+          603.0,
+          648.2,
+          670.7,
+          676.6,
+          655.3,
+          523.4,
+          772.2,
+          706.6,
+          682.3,
+          681.0,
+          653.3
+        ],
+        "accuracy": 88.5,
+        "hesitationCount": 0,
+        "engagementScore": 85.4,
+        "correctAttempts": 15,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 635.6,
+        "reactionTimeVariability": 71.3
+      }
+    },
+    {
+      "gameId": "shapes",
+      "score": 87.5,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1257.8,
+          1203.0,
+          1752.1,
+          1274.8,
+          1001.2,
+          1299.0,
+          1651.0,
+          1105.6,
+          1127.7,
+          1068.9,
+          1254.8,
+          1149.2,
+          1458.7,
+          1341.0,
+          1088.0,
+          1228.8
+        ],
+        "accuracy": 88.9,
+        "hesitationCount": 0,
+        "engagementScore": 84.3,
+        "correctAttempts": 14,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 1266.4,
+        "reactionTimeVariability": 198.9
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 86.4,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1530.8,
+          1279.2,
+          2249.1,
+          1570.3,
+          1162.8,
+          716.7
+        ],
+        "accuracy": 87.1,
+        "hesitationCount": 2,
+        "engagementScore": 84.8,
+        "correctAttempts": 5,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1418.2,
+        "reactionTimeVariability": 466.0
+      }
+    }
+  ],
+  "older_at_risk": [
+    {
+      "gameId": "memory",
+      "score": 34.6,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          789.2,
+          1199.0,
+          1275.3,
+          1186.1,
+          1396.5,
+          846.8,
+          843.6,
+          678.8,
+          1068.4,
+          1043.5,
+          1237.8,
+          1067.7,
+          1028.4,
+          1871.2,
+          1218.0
+        ],
+        "accuracy": 40.0,
+        "hesitationCount": 3,
+        "engagementScore": 22.1,
+        "correctAttempts": 6,
+        "incorrectAttempts": 9,
+        "averageReactionTime": 1116.7,
+        "reactionTimeVariability": 279.7
+      }
+    },
+    {
+      "gameId": "category",
+      "score": 42.0,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2055.8,
+          1325.9,
+          1921.0,
+          1142.0,
+          3202.6,
+          3063.5,
+          1155.9,
+          2836.1,
+          2831.8,
+          856.9,
+          1360.0,
+          1404.0,
+          3247.9,
+          2886.3,
+          2746.8,
+          909.0
+        ],
+        "accuracy": 46.4,
+        "hesitationCount": 10,
+        "engagementScore": 31.7,
+        "correctAttempts": 7,
+        "incorrectAttempts": 9,
+        "averageReactionTime": 2059.1,
+        "reactionTimeVariability": 865.6
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 58.5,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2231.0,
+          2366.4,
+          1033.3,
+          1364.5,
+          1836.2,
+          1052.8,
+          3346.4,
+          1749.6,
+          1659.2,
+          1501.1,
+          1471.2
+        ],
+        "accuracy": 67.8,
+        "hesitationCount": 9,
+        "engagementScore": 36.9,
+        "correctAttempts": 7,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 1782.9,
+        "reactionTimeVariability": 636.2
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 47.4,
+      "timestamp": 1700172800000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2761.5,
+          1908.6,
+          2244.8,
+          2076.5,
+          1168.2,
+          1438.6,
+          1300.3,
+          1556.2,
+          1087.8,
+          1966.8,
+          1154.1,
+          2211.6,
+          750.6,
+          635.1
+        ],
+        "accuracy": 52.5,
+        "hesitationCount": 6,
+        "engagementScore": 35.6,
+        "correctAttempts": 7,
+        "incorrectAttempts": 7,
+        "averageReactionTime": 1590.1,
+        "reactionTimeVariability": 598.3
+      }
+    },
+    {
+      "gameId": "category",
+      "score": 39.4,
+      "timestamp": 1700172800000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          3373.6,
+          2881.2,
+          2350.1,
+          1979.2,
+          1603.3,
+          4060.1,
+          1363.2,
+          2221.8,
+          4068.2,
+          2752.8,
+          1244.7,
+          2231.4
+        ],
+        "accuracy": 42.4,
+        "hesitationCount": 9,
+        "engagementScore": 32.5,
+        "correctAttempts": 5,
+        "incorrectAttempts": 7,
+        "averageReactionTime": 2510.8,
+        "reactionTimeVariability": 911.9
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 49.8,
+      "timestamp": 1700172800000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2140.9,
+          1391.4,
+          1578.8,
+          2270.3,
+          4574.6,
+          1286.6,
+          1122.6,
+          2538.4,
+          1983.2,
+          1436.4,
+          1823.8
+        ],
+        "accuracy": 54.9,
+        "hesitationCount": 6,
+        "engagementScore": 38.1,
+        "correctAttempts": 6,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 2013.4,
+        "reactionTimeVariability": 913.8
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 42.4,
+      "timestamp": 1700259200000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2351.4,
+          1232.6,
+          529.7,
+          839.8,
+          738.2,
+          1509.3
+        ],
+        "accuracy": 43.3,
+        "hesitationCount": 2,
+        "engagementScore": 40.2,
+        "correctAttempts": 3,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 1200.2,
+        "reactionTimeVariability": 607.6
+      }
+    },
+    {
+      "gameId": "category",
+      "score": 40.7,
+      "timestamp": 1700259200000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2089.0,
+          2587.9,
+          3232.0,
+          4217.3,
+          3232.0,
+          1460.8,
+          2981.9,
+          1817.9,
+          2646.8,
+          2330.0,
+          2316.3,
+          1878.2
+        ],
+        "accuracy": 41.1,
+        "hesitationCount": 8,
+        "engagementScore": 39.9,
+        "correctAttempts": 5,
+        "incorrectAttempts": 7,
+        "averageReactionTime": 2565.8,
+        "reactionTimeVariability": 729.9
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 44.3,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2442.7,
+          2240.3,
+          3283.6,
+          2425.0,
+          1567.7,
+          2780.0,
+          3379.8,
+          2216.7,
+          2588.8,
+          2658.6
+        ],
+        "accuracy": 50.6,
+        "hesitationCount": 8,
+        "engagementScore": 29.7,
+        "correctAttempts": 5,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 2558.3,
+        "reactionTimeVariability": 499.1
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 42.4,
+      "timestamp": 1700259200000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2581.8,
+          2419.1,
+          2028.3,
+          1493.2,
+          2296.4,
+          2383.9,
+          3752.0,
+          2269.7
+        ],
+        "accuracy": 43.3,
+        "hesitationCount": 14,
+        "engagementScore": 40.3,
+        "correctAttempts": 3,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 2403.1,
+        "reactionTimeVariability": 596.8
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 47.7,
+      "timestamp": 1700345600000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2984.5,
+          2084.6,
+          2202.3,
+          716.5,
+          2357.1,
+          1873.5,
+          1887.2,
+          3176.3,
+          1585.0
+        ],
+        "accuracy": 48.3,
+        "hesitationCount": 13,
+        "engagementScore": 46.0,
+        "correctAttempts": 4,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 2096.3,
+        "reactionTimeVariability": 690.7
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 46.4,
+      "timestamp": 1700345600000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2117.3,
+          2199.2,
+          2294.9,
+          2939.5,
+          2340.1,
+          2596.3
+        ],
+        "accuracy": 46.4,
+        "hesitationCount": 15,
+        "engagementScore": 46.4,
+        "correctAttempts": 3,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 2414.6,
+        "reactionTimeVariability": 277.9
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 46.6,
+      "timestamp": 1700432000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1483.8,
+          4092.9,
+          1639.1,
+          1699.7,
+          2772.1,
+          1695.3,
+          1806.7,
+          1846.1,
+          1579.6,
+          2344.9
+        ],
+        "accuracy": 53.1,
+        "hesitationCount": 11,
+        "engagementScore": 31.5,
+        "correctAttempts": 5,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 2096.0,
+        "reactionTimeVariability": 762.9
+      }
+    },
+    {
+      "gameId": "category",
+      "score": 37.1,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1418.3,
+          2369.4,
+          2382.9,
+          1695.8,
+          2430.5,
+          2063.3,
+          2982.3,
+          1567.6,
+          876.7,
+          1030.9,
+          2223.1,
+          1254.6,
+          1623.0,
+          2155.8
+        ],
+        "accuracy": 37.3,
+        "hesitationCount": 8,
+        "engagementScore": 36.7,
+        "correctAttempts": 5,
+        "incorrectAttempts": 9,
+        "averageReactionTime": 1862.4,
+        "reactionTimeVariability": 583.3
+      }
+    },
+    {
+      "gameId": "category",
+      "score": 37.5,
+      "timestamp": 1700691200000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2610.2,
+          2989.2,
+          1303.8,
+          861.1,
+          3964.8,
+          1210.5,
+          1339.8,
+          1183.9,
+          2168.4,
+          1046.5,
+          1827.2,
+          2507.4,
+          2106.1,
+          1407.6
+        ],
+        "accuracy": 45.0,
+        "hesitationCount": 8,
+        "engagementScore": 20.1,
+        "correctAttempts": 6,
+        "incorrectAttempts": 8,
+        "averageReactionTime": 1894.7,
+        "reactionTimeVariability": 851.5
+      }
+    },
+    {
+      "gameId": "category",
+      "score": 34.8,
+      "timestamp": 1700864000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          946.9,
+          1692.0,
+          1490.0,
+          3596.8,
+          2697.1,
+          2423.2,
+          3618.5,
+          3725.2,
+          1080.4,
+          1082.7,
+          2046.0,
+          1824.9,
+          2250.6,
+          1404.1,
+          2918.3
+        ],
+        "accuracy": 36.8,
+        "hesitationCount": 8,
+        "engagementScore": 30.2,
+        "correctAttempts": 6,
+        "incorrectAttempts": 9,
+        "averageReactionTime": 2186.4,
+        "reactionTimeVariability": 921.4
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 32.0,
+      "timestamp": 1700864000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2232.1,
+          4155.6,
+          1821.8,
+          1630.4,
+          1289.6,
+          3141.0,
+          2395.9,
+          1903.8,
+          1750.2
+        ],
+        "accuracy": 39.3,
+        "hesitationCount": 13,
+        "engagementScore": 14.8,
+        "correctAttempts": 4,
+        "incorrectAttempts": 5,
+        "averageReactionTime": 2257.8,
+        "reactionTimeVariability": 837.0
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 40.0,
+      "timestamp": 1701036800000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2255.2,
+          2262.8,
+          3374.3,
+          2042.4,
+          963.4,
+          1589.7,
+          1801.7
+        ],
+        "accuracy": 43.8,
+        "hesitationCount": 11,
+        "engagementScore": 31.2,
+        "correctAttempts": 3,
+        "incorrectAttempts": 4,
+        "averageReactionTime": 2041.3,
+        "reactionTimeVariability": 686.1
+      }
+    }
+  ],
+  "comprehensive_all_games": [
+    {
+      "gameId": "catcher",
+      "score": 85.6,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          460.5,
+          462.8,
+          401.4,
+          556.0,
+          441.4,
+          351.8,
+          832.3,
+          415.8,
+          547.5,
+          562.1,
+          441.5,
+          554.0,
+          475.0,
+          540.1,
+          485.2,
+          541.8,
+          550.6,
+          358.9,
+          525.0,
+          449.6,
+          573.0,
+          352.5
+        ],
+        "accuracy": 87.7,
+        "hesitationCount": 1,
+        "engagementScore": 80.9,
+        "correctAttempts": 19,
+        "incorrectAttempts": 3,
+        "averageReactionTime": 494.5,
+        "reactionTimeVariability": 101.7
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 86.1,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          849.4,
+          788.7,
+          1080.9,
+          856.4,
+          1514.4,
+          845.1,
+          901.3,
+          635.8,
+          605.0,
+          966.5,
+          791.2
+        ],
+        "accuracy": 88.3,
+        "hesitationCount": 1,
+        "engagementScore": 80.9,
+        "correctAttempts": 10,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 894.1,
+        "reactionTimeVariability": 234.1
+      }
+    },
+    {
+      "gameId": "shapes",
+      "score": 86.9,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1097.6,
+          687.5,
+          898.2,
+          915.8,
+          885.6,
+          781.9,
+          1448.3,
+          1251.7,
+          975.7,
+          850.2,
+          991.4,
+          1012.5,
+          1269.5,
+          937.2,
+          920.3,
+          925.8,
+          902.2
+        ],
+        "accuracy": 88.5,
+        "hesitationCount": 1,
+        "engagementScore": 83.0,
+        "correctAttempts": 15,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 985.4,
+        "reactionTimeVariability": 182.7
+      }
+    },
+    {
+      "gameId": "sound",
+      "score": 87.3,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1280.5,
+          1204.4,
+          993.1,
+          1442.4,
+          1151.3,
+          1331.3,
+          1633.7,
+          1388.2,
+          1099.1,
+          967.4,
+          1301.4,
+          1313.8,
+          1135.6,
+          1313.7,
+          1572.9
+        ],
+        "accuracy": 90.0,
+        "hesitationCount": 1,
+        "engagementScore": 81.1,
+        "correctAttempts": 13,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 1275.3,
+        "reactionTimeVariability": 184.4
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 87.7,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1776.2,
+          819.7,
+          792.1,
+          782.2,
+          726.4,
+          1505.7,
+          809.5
+        ],
+        "accuracy": 90.1,
+        "hesitationCount": 2,
+        "engagementScore": 82.0,
+        "correctAttempts": 6,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1030.2,
+        "reactionTimeVariability": 393.9
+      }
+    },
+    {
+      "gameId": "counting",
+      "score": 87.0,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1314.9,
+          1527.1,
+          1441.5,
+          1511.7,
+          1109.5,
+          1310.8,
+          1097.1,
+          1381.3,
+          1216.4
+        ],
+        "accuracy": 89.4,
+        "hesitationCount": 0,
+        "engagementScore": 81.3,
+        "correctAttempts": 8,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1323.4,
+        "reactionTimeVariability": 150.1
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 86.5,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          906.0,
+          1356.6,
+          969.4,
+          864.4,
+          776.9,
+          1266.8
+        ],
+        "accuracy": 88.6,
+        "hesitationCount": 2,
+        "engagementScore": 81.5,
+        "correctAttempts": 5,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1023.4,
+        "reactionTimeVariability": 213.3
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 87.8,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          924.6,
+          864.7,
+          996.1,
+          839.5,
+          745.4
+        ],
+        "accuracy": 89.3,
+        "hesitationCount": 0,
+        "engagementScore": 84.2,
+        "correctAttempts": 4,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 874.1,
+        "reactionTimeVariability": 84.0
+      }
+    },
+    {
+      "gameId": "maze",
+      "score": 86.8,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          643.0,
+          697.1,
+          761.4,
+          598.0,
+          714.1,
+          632.4,
+          481.1,
+          739.7,
+          566.6,
+          739.0,
+          761.9,
+          552.3,
+          647.7
+        ],
+        "accuracy": 89.2,
+        "hesitationCount": 1,
+        "engagementScore": 81.3,
+        "correctAttempts": 12,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 656.5,
+        "reactionTimeVariability": 85.4
+      }
+    },
+    {
+      "gameId": "category",
+      "score": 85.9,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          806.0,
+          1358.6,
+          854.6,
+          1031.1,
+          1180.0,
+          456.5,
+          1134.3,
+          1060.9,
+          961.4,
+          946.8,
+          1024.6,
+          1156.8,
+          810.9,
+          1092.2
+        ],
+        "accuracy": 87.8,
+        "hesitationCount": 1,
+        "engagementScore": 81.5,
+        "correctAttempts": 12,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 991.0,
+        "reactionTimeVariability": 208.8
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 89.3,
+      "timestamp": 1700086400000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          539.3,
+          607.1,
+          343.4,
+          405.6,
+          394.4,
+          389.7,
+          514.3,
+          462.1,
+          391.3,
+          534.1,
+          571.6,
+          352.8,
+          363.5,
+          299.6,
+          610.6,
+          387.6,
+          460.0,
+          550.0,
+          550.6,
+          542.5,
+          346.1
+        ],
+        "accuracy": 92.4,
+        "hesitationCount": 1,
+        "engagementScore": 82.1,
+        "correctAttempts": 19,
+        "incorrectAttempts": 2,
+        "averageReactionTime": 457.9,
+        "reactionTimeVariability": 95.1
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 89.5,
+      "timestamp": 1700086400000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          595.8,
+          1151.3,
+          875.2,
+          509.1,
+          680.5,
+          570.4
+        ],
+        "accuracy": 92.7,
+        "hesitationCount": 1,
+        "engagementScore": 82.0,
+        "correctAttempts": 6,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 730.4,
+        "reactionTimeVariability": 221.1
+      }
+    },
+    {
+      "gameId": "shapes",
+      "score": 89.0,
+      "timestamp": 1700086400000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          937.4,
+          805.3,
+          1084.5,
+          1247.1,
+          763.1,
+          975.8,
+          1089.5,
+          1024.5,
+          829.6,
+          1276.1,
+          1081.4,
+          868.9
+        ],
+        "accuracy": 91.6,
+        "hesitationCount": 0,
+        "engagementScore": 82.9,
+        "correctAttempts": 11,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 998.6,
+        "reactionTimeVariability": 159.3
+      }
+    },
+    {
+      "gameId": "sound",
+      "score": 89.3,
+      "timestamp": 1700086400000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1167.2,
+          1370.2,
+          1289.1,
+          1320.5,
+          1004.0,
+          1361.6
+        ],
+        "accuracy": 91.2,
+        "hesitationCount": 0,
+        "engagementScore": 84.8,
+        "correctAttempts": 5,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1252.1,
+        "reactionTimeVariability": 129.6
+      }
+    },
+    {
+      "gameId": "maze",
+      "score": 91.2,
+      "timestamp": 1700086400000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          675.8,
+          525.9,
+          718.2,
+          724.3,
+          719.2,
+          723.5,
+          809.2,
+          700.4,
+          535.2,
+          523.1,
+          651.9,
+          414.1
+        ],
+        "accuracy": 95.0,
+        "hesitationCount": 0,
+        "engagementScore": 82.5,
+        "correctAttempts": 11,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 643.4,
+        "reactionTimeVariability": 111.3
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 91.1,
+      "timestamp": 1700172800000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1115.3,
+          794.3,
+          880.1,
+          764.9,
+          567.3,
+          1203.1,
+          723.2,
+          746.9,
+          967.8
+        ],
+        "accuracy": 94.2,
+        "hesitationCount": 1,
+        "engagementScore": 83.9,
+        "correctAttempts": 8,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 862.5,
+        "reactionTimeVariability": 190.1
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 93.0,
+      "timestamp": 1700172800000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1096.0,
+          935.5,
+          2588.8,
+          978.6,
+          968.7,
+          2379.7,
+          958.4,
+          1055.6,
+          2125.1,
+          1059.1
+        ],
+        "accuracy": 96.6,
+        "hesitationCount": 2,
+        "engagementScore": 84.6,
+        "correctAttempts": 10,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 1414.6,
+        "reactionTimeVariability": 632.3
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 90.7,
+      "timestamp": 1700172800000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          948.7,
+          2036.1,
+          924.3,
+          635.1,
+          931.8
+        ],
+        "accuracy": 93.6,
+        "hesitationCount": 1,
+        "engagementScore": 83.7,
+        "correctAttempts": 5,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 1095.2,
+        "reactionTimeVariability": 484.7
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 91.1,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          471.5,
+          571.0,
+          808.0,
+          521.4,
+          626.6,
+          755.4
+        ],
+        "accuracy": 94.6,
+        "hesitationCount": 0,
+        "engagementScore": 82.9,
+        "correctAttempts": 6,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 625.7,
+        "reactionTimeVariability": 120.9
+      }
+    },
+    {
+      "gameId": "counting",
+      "score": 89.3,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1919.8,
+          1027.6,
+          919.0,
+          1285.4,
+          1082.0
+        ],
+        "accuracy": 91.9,
+        "hesitationCount": 2,
+        "engagementScore": 83.2,
+        "correctAttempts": 5,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 1246.8,
+        "reactionTimeVariability": 357.0
+      }
+    },
+    {
+      "gameId": "emotion",
+      "score": 90.1,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          777.0,
+          1024.7,
+          729.2,
+          925.1,
+          830.2,
+          1075.5
+        ],
+        "accuracy": 92.7,
+        "hesitationCount": 1,
+        "engagementScore": 83.8,
+        "correctAttempts": 6,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 893.6,
+        "reactionTimeVariability": 126.4
+      }
+    },
+    {
+      "gameId": "category",
+      "score": 88.9,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          717.3,
+          863.1,
+          1048.3,
+          740.3,
+          797.2,
+          1126.6,
+          1158.5,
+          918.1,
+          987.7,
+          728.9,
+          814.4,
+          1110.9
+        ],
+        "accuracy": 90.6,
+        "hesitationCount": 0,
+        "engagementScore": 85.1,
+        "correctAttempts": 11,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 917.6,
+        "reactionTimeVariability": 157.1
+      }
+    },
+    {
+      "gameId": "sound",
+      "score": 91.9,
+      "timestamp": 1700345600000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1329.2,
+          1555.8,
+          1508.0,
+          2807.7,
+          1470.8,
+          1292.1,
+          1437.7,
+          1465.3,
+          1315.1,
+          1597.1,
+          1185.9,
+          1091.0,
+          1523.3,
+          1600.4
+        ],
+        "accuracy": 94.3,
+        "hesitationCount": 1,
+        "engagementScore": 86.3,
+        "correctAttempts": 13,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1512.8,
+        "reactionTimeVariability": 388.2
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 93.0,
+      "timestamp": 1700345600000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          905.5,
+          728.3,
+          899.2,
+          1056.3,
+          741.9,
+          887.0,
+          857.8,
+          816.2,
+          976.4
+        ],
+        "accuracy": 96.4,
+        "hesitationCount": 0,
+        "engagementScore": 84.9,
+        "correctAttempts": 9,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 874.3,
+        "reactionTimeVariability": 98.7
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 92.9,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          421.0,
+          625.1,
+          341.2,
+          473.7,
+          518.6,
+          622.8,
+          379.5,
+          437.3,
+          490.1,
+          542.8,
+          569.0
+        ],
+        "accuracy": 95.9,
+        "hesitationCount": 0,
+        "engagementScore": 86.0,
+        "correctAttempts": 11,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 492.8,
+        "reactionTimeVariability": 89.3
+      }
+    },
+    {
+      "gameId": "shapes",
+      "score": 92.6,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          865.0,
+          1288.2,
+          1141.9,
+          920.1,
+          1082.5,
+          832.3,
+          1218.2,
+          976.8,
+          980.9,
+          1111.8,
+          1423.5,
+          913.9,
+          838.2,
+          929.6,
+          981.4,
+          1258.2,
+          1102.8
+        ],
+        "accuracy": 95.6,
+        "hesitationCount": 1,
+        "engagementScore": 85.6,
+        "correctAttempts": 16,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 1050.9,
+        "reactionTimeVariability": 167.2
+      }
+    },
+    {
+      "gameId": "leader",
+      "score": 94.1,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          720.3,
+          902.9,
+          801.3,
+          659.0,
+          1038.4
+        ],
+        "accuracy": 98.1,
+        "hesitationCount": 1,
+        "engagementScore": 84.8,
+        "correctAttempts": 5,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 824.4,
+        "reactionTimeVariability": 134.7
+      }
+    },
+    {
+      "gameId": "counting",
+      "score": 92.9,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          2403.2,
+          2890.8,
+          1868.2,
+          2053.2,
+          979.6
+        ],
+        "accuracy": 96.6,
+        "hesitationCount": 3,
+        "engagementScore": 84.0,
+        "correctAttempts": 5,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 2039.0,
+        "reactionTimeVariability": 634.0
+      }
+    },
+    {
+      "gameId": "maze",
+      "score": 91.7,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          552.7,
+          468.3,
+          640.8,
+          777.5,
+          794.1,
+          822.6,
+          549.1,
+          844.9,
+          825.8,
+          569.7,
+          607.4,
+          493.8,
+          946.1,
+          613.8,
+          711.4,
+          636.9,
+          620.7,
+          798.4,
+          613.4,
+          721.1
+        ],
+        "accuracy": 94.6,
+        "hesitationCount": 0,
+        "engagementScore": 84.8,
+        "correctAttempts": 19,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 680.4,
+        "reactionTimeVariability": 127.4
+      }
+    },
+    {
+      "gameId": "category",
+      "score": 93.0,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1266.4,
+          875.0,
+          892.3,
+          935.4,
+          1002.0,
+          1108.3,
+          882.4,
+          1162.4,
+          915.6
+        ],
+        "accuracy": 96.5,
+        "hesitationCount": 0,
+        "engagementScore": 84.8,
+        "correctAttempts": 9,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 1004.4,
+        "reactionTimeVariability": 133.8
+      }
+    }
+  ],
+  "declining_performance": [
+    {
+      "gameId": "catcher",
+      "score": 89.0,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          705.9,
+          379.0,
+          450.3,
+          200.1,
+          506.6,
+          604.6,
+          333.1,
+          363.1,
+          390.4,
+          514.3
+        ],
+        "accuracy": 92.1,
+        "hesitationCount": 2,
+        "engagementScore": 81.6,
+        "correctAttempts": 9,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 444.7,
+        "reactionTimeVariability": 137.4
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 87.6,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          1021.7,
+          881.3,
+          968.6,
+          990.6,
+          712.6,
+          746.7,
+          890.9,
+          653.1,
+          607.4,
+          771.1,
+          748.2,
+          790.8,
+          891.4,
+          772.5
+        ],
+        "accuracy": 89.6,
+        "hesitationCount": 0,
+        "engagementScore": 83.0,
+        "correctAttempts": 13,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 817.6,
+        "reactionTimeVariability": 121.4
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 92.3,
+      "timestamp": 1700172800000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          393.2,
+          463.8,
+          456.0,
+          518.4,
+          395.3,
+          470.9,
+          469.4,
+          499.5,
+          398.4,
+          480.0,
+          468.8,
+          422.4,
+          378.4,
+          476.9,
+          321.6,
+          279.3
+        ],
+        "accuracy": 95.7,
+        "hesitationCount": 0,
+        "engagementScore": 84.4,
+        "correctAttempts": 15,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 430.7,
+        "reactionTimeVariability": 63.5
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 93.2,
+      "timestamp": 1700172800000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          610.8,
+          861.3,
+          679.5,
+          758.1,
+          484.0,
+          793.1,
+          720.7,
+          538.2,
+          931.5
+        ],
+        "accuracy": 96.1,
+        "hesitationCount": 0,
+        "engagementScore": 86.6,
+        "correctAttempts": 9,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 708.6,
+        "reactionTimeVariability": 138.5
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 95.7,
+      "timestamp": 1700345600000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          440.8,
+          427.6,
+          345.2,
+          363.2,
+          445.0,
+          410.1,
+          318.2,
+          278.1,
+          405.1,
+          371.4,
+          453.5,
+          392.4
+        ],
+        "accuracy": 75.0,
+        "hesitationCount": 4,
+        "engagementScore": 65.5,
+        "correctAttempts": 12,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 387.6,
+        "reactionTimeVariability": 51.9
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 95.0,
+      "timestamp": 1700345600000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          594.4,
+          705.2,
+          896.0,
+          730.1,
+          589.0,
+          828.8,
+          912.6
+        ],
+        "accuracy": 99.2,
+        "hesitationCount": 0,
+        "engagementScore": 85.0,
+        "correctAttempts": 7,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 750.9,
+        "reactionTimeVariability": 123.3
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 96.6,
+      "timestamp": 1700345600000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          467.4,
+          862.7,
+          477.1,
+          960.8,
+          864.5,
+          619.4
+        ],
+        "accuracy": 75.0,
+        "hesitationCount": 4,
+        "engagementScore": 68.8,
+        "correctAttempts": 6,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 708.7,
+        "reactionTimeVariability": 196.4
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 96.3,
+      "timestamp": 1700432000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          744.0,
+          617.7,
+          744.2,
+          775.0,
+          701.3,
+          644.0,
+          707.1,
+          742.4,
+          708.0
+        ],
+        "accuracy": 75.0,
+        "hesitationCount": 4,
+        "engagementScore": 67.6,
+        "correctAttempts": 9,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 709.3,
+        "reactionTimeVariability": 47.8
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 92.6,
+      "timestamp": 1700518400000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          274.1,
+          492.1,
+          530.2,
+          459.0,
+          478.8,
+          407.8,
+          414.3,
+          368.6,
+          427.8,
+          429.7,
+          556.8,
+          522.3,
+          544.8,
+          476.2,
+          425.7,
+          472.7,
+          373.2,
+          400.7,
+          285.2,
+          431.0,
+          446.6,
+          295.4
+        ],
+        "accuracy": 96.0,
+        "hesitationCount": 1,
+        "engagementScore": 84.7,
+        "correctAttempts": 21,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 432.4,
+        "reactionTimeVariability": 77.2
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 96.3,
+      "timestamp": 1700518400000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          330.5,
+          437.7,
+          476.9,
+          402.8,
+          333.3,
+          483.7,
+          307.7,
+          468.7,
+          498.9,
+          507.0,
+          337.9,
+          604.9,
+          294.9,
+          365.1,
+          204.2,
+          473.5
+        ],
+        "accuracy": 100.0,
+        "hesitationCount": 2,
+        "engagementScore": 87.6,
+        "correctAttempts": 16,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 408.0,
+        "reactionTimeVariability": 99.7
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 97.6,
+      "timestamp": 1700604800000,
+      "sessionNumber": 8,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          629.8,
+          827.6,
+          705.1,
+          703.4,
+          881.1,
+          639.0,
+          719.4,
+          701.5,
+          583.1,
+          764.7,
+          770.5,
+          905.0,
+          712.7,
+          456.8
+        ],
+        "accuracy": 75.0,
+        "hesitationCount": 4,
+        "engagementScore": 72.1,
+        "correctAttempts": 14,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 714.3,
+        "reactionTimeVariability": 113.2
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 95.9,
+      "timestamp": 1700777600000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          921.0,
+          802.2,
+          873.7,
+          606.9,
+          2004.7,
+          1655.6,
+          757.7,
+          1223.4
+        ],
+        "accuracy": 100.0,
+        "hesitationCount": 1,
+        "engagementScore": 86.5,
+        "correctAttempts": 8,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 1105.7,
+        "reactionTimeVariability": 457.5
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 97.1,
+      "timestamp": 1700864000000,
+      "sessionNumber": 6,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          393.6,
+          405.4,
+          347.8,
+          456.9,
+          427.5,
+          464.6,
+          451.8,
+          484.3,
+          370.7,
+          451.8,
+          276.7,
+          468.6,
+          434.8,
+          446.0,
+          394.1
+        ],
+        "accuracy": 75.0,
+        "hesitationCount": 4,
+        "engagementScore": 70.3,
+        "correctAttempts": 15,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 418.3,
+        "reactionTimeVariability": 53.3
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 97.9,
+      "timestamp": 1701036800000,
+      "sessionNumber": 7,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          326.2,
+          365.0,
+          304.9,
+          307.3,
+          603.9,
+          466.3,
+          304.1,
+          430.5,
+          356.5,
+          552.8,
+          515.8,
+          528.7,
+          433.5,
+          380.2,
+          446.2,
+          468.7,
+          389.8,
+          408.2,
+          375.1,
+          403.7,
+          437.1,
+          545.7
+        ],
+        "accuracy": 75.0,
+        "hesitationCount": 4,
+        "engagementScore": 73.0,
+        "correctAttempts": 22,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 425.0,
+        "reactionTimeVariability": 83.6
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 98.0,
+      "timestamp": 1701209600000,
+      "sessionNumber": 8,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          335.8,
+          424.2,
+          501.2,
+          387.0,
+          433.3,
+          490.7,
+          610.5,
+          382.9,
+          500.3,
+          415.2,
+          424.4
+        ],
+        "accuracy": 75.0,
+        "hesitationCount": 4,
+        "engagementScore": 73.4,
+        "correctAttempts": 11,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 446.0,
+        "reactionTimeVariability": 71.8
+      }
+    },
+    {
+      "gameId": "memory",
+      "score": 97.1,
+      "timestamp": 1701555200000,
+      "sessionNumber": 7,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          674.9,
+          641.3,
+          730.1,
+          745.8,
+          597.8,
+          626.3
+        ],
+        "accuracy": 75.0,
+        "hesitationCount": 4,
+        "engagementScore": 70.4,
+        "correctAttempts": 6,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 669.4,
+        "reactionTimeVariability": 53.7
+      }
+    }
+  ],
+  "perfect_performer": [
+    {
+      "gameId": "catcher",
+      "score": 98.66890272548467,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          349.7,
+          331.6,
+          350.7,
+          381.3,
+          273.0,
+          311.5,
+          476.5,
+          406.2,
+          494.6,
+          390.6
+        ],
+        "accuracy": 95.75665685397068,
+        "hesitationCount": 0,
+        "engagementScore": 97.6244627298477,
+        "correctAttempts": 9,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 376.6,
+        "reactionTimeVariability": 65.9
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 95.95799178783915,
+      "timestamp": 1700000000000,
+      "sessionNumber": 1,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          580.4,
+          851.6,
+          849.7,
+          542.1,
+          746.0,
+          610.9,
+          872.7,
+          646.0,
+          568.2,
+          593.0
+        ],
+        "accuracy": 97.16590104713246,
+        "hesitationCount": 0,
+        "engagementScore": 92.67012521921903,
+        "correctAttempts": 9,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 686.0,
+        "reactionTimeVariability": 124.2
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 95.70076227463329,
+      "timestamp": 1700086400000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          289.7,
+          329.5,
+          386.3,
+          287.8,
+          415.9,
+          429.2,
+          283.9,
+          470.3,
+          416.9,
+          225.3,
+          416.7,
+          405.5,
+          421.6,
+          590.0,
+          406.3,
+          472.8,
+          524.7,
+          359.1,
+          525.7,
+          465.2
+        ],
+        "accuracy": 95.3012935400069,
+        "hesitationCount": 0,
+        "engagementScore": 91.49839144905931,
+        "correctAttempts": 19,
+        "incorrectAttempts": 1,
+        "averageReactionTime": 406.1,
+        "reactionTimeVariability": 89.1
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 96.71636275748753,
+      "timestamp": 1700172800000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          385.6,
+          435.1,
+          409.2,
+          347.3,
+          466.4,
+          292.0,
+          378.1,
+          437.2,
+          337.2,
+          347.2,
+          487.3,
+          478.7,
+          339.2,
+          492.9,
+          453.9,
+          335.4,
+          365.0,
+          399.0
+        ],
+        "accuracy": 95.2178139533976,
+        "hesitationCount": 0,
+        "engagementScore": 96.04139625849331,
+        "correctAttempts": 18,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 399.3,
+        "reactionTimeVariability": 59.3
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 95.31565265031422,
+      "timestamp": 1700172800000,
+      "sessionNumber": 3,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          761.0,
+          367.1,
+          829.1,
+          641.4,
+          513.9,
+          628.2,
+          562.6,
+          502.8,
+          744.2
+        ],
+        "accuracy": 98.95883247515815,
+        "hesitationCount": 0,
+        "engagementScore": 96.13242347579472,
+        "correctAttempts": 9,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 616.7,
+        "reactionTimeVariability": 138.1
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 97.97713109746105,
+      "timestamp": 1700259200000,
+      "sessionNumber": 2,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          615.9,
+          570.4,
+          1509.1,
+          514.2,
+          601.0,
+          1669.4,
+          1096.8
+        ],
+        "accuracy": 99.0064322507798,
+        "hesitationCount": 0,
+        "engagementScore": 99.22057855238828,
+        "correctAttempts": 7,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 939.5,
+        "reactionTimeVariability": 450.1
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 99.24920170392976,
+      "timestamp": 1700345600000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          613.9,
+          734.2,
+          648.1,
+          763.2,
+          703.9,
+          789.7,
+          1161.0,
+          804.3,
+          769.7,
+          579.7
+        ],
+        "accuracy": 95.23120554211094,
+        "hesitationCount": 0,
+        "engagementScore": 97.84180338711369,
+        "correctAttempts": 10,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 756.8,
+        "reactionTimeVariability": 152.9
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 98.29674071825464,
+      "timestamp": 1700518400000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          328.9,
+          372.7,
+          448.6,
+          425.8,
+          373.5,
+          394.9,
+          490.1,
+          281.6,
+          285.4,
+          438.8,
+          248.3,
+          282.2,
+          505.0,
+          437.7,
+          398.9,
+          386.8,
+          272.5,
+          351.3,
+          546.8,
+          449.7
+        ],
+        "accuracy": 97.09194702948813,
+        "hesitationCount": 0,
+        "engagementScore": 91.19054182125403,
+        "correctAttempts": 20,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 386.0,
+        "reactionTimeVariability": 82.0
+      }
+    },
+    {
+      "gameId": "simon",
+      "score": 96.15014064437229,
+      "timestamp": 1700518400000,
+      "sessionNumber": 4,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          762.0,
+          702.7,
+          533.0,
+          622.9,
+          808.5,
+          656.6,
+          465.1,
+          743.6,
+          599.5
+        ],
+        "accuracy": 98.3903854597122,
+        "hesitationCount": 0,
+        "engagementScore": 97.0255183161823,
+        "correctAttempts": 9,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 654.9,
+        "reactionTimeVariability": 105.5
+      }
+    },
+    {
+      "gameId": "catcher",
+      "score": 97.01541969404835,
+      "timestamp": 1701036800000,
+      "sessionNumber": 5,
+      "behavioralMetrics": {
+        "reactionTimes": [
+          424.8,
+          469.5,
+          307.1,
+          543.6,
+          522.7,
+          359.2,
+          391.7,
+          358.0,
+          399.0,
+          323.0,
+          360.9,
+          377.2,
+          373.6,
+          262.1,
+          461.9,
+          332.8,
+          462.6,
+          449.4,
+          526.6,
+          332.7,
+          457.5
+        ],
+        "accuracy": 95.40778792084552,
+        "hesitationCount": 0,
+        "engagementScore": 92.01472979466483,
+        "correctAttempts": 21,
+        "incorrectAttempts": 0,
+        "averageReactionTime": 404.6,
+        "reactionTimeVariability": 75.3
+      }
+    }
+  ]
+}

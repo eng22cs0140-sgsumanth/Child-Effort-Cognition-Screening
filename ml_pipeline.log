@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/home/sumanth/Desktop/major_project/ml_pipeline/run.py", line 9, in <module>
+    from ml_pipeline.logging_config import PipelineLogger
+ModuleNotFoundError: No module named 'ml_pipeline'

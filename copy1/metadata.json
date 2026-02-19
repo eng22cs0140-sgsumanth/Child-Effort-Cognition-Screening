@@ -1,0 +1,7 @@
+{
+  "name": "copy1",
+  "description": "A comprehensive developmental assessment platform for children aged 0-9 featuring 10 interactive games tracking cognitive, social-emotional, and attention growth.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "classifier": {
+    "accuracy": 1.0,
+    "cv_accuracy_mean": 1.0,
+    "cv_accuracy_std": 0.0,
+    "classification_report": {
+      "green": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 200.0
+      },
+      "amber": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 200.0
+      },
+      "red": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 200.0
+      },
+      "accuracy": 1.0,
+      "macro avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 600.0
+      },
+      "weighted avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 600.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        200,
+        0,
+        0
+      ],
+      [
+        0,
+        200,
+        0
+      ],
+      [
+        0,
+        0,
+        200
+      ]
+    ],
+    "feature_importance": {
+      "avg_accuracy": 0.2509964161634713,
+      "avg_reaction_time": 0.1327710216219404,
+      "avg_hesitation": 0.2792806816680913,
+      "avg_engagement": 0.20292959972525382,
+      "accuracy_std": 0.029259328843265694,
+      "rt_variability": 0.10234558918777395,
+      "session_count": 0.0002052853971460943,
+      "num_games": 0.0,
+      "age": 0.002212077393057468
+    }
+  },
+  "regressor": {
+    "mae": 0.0024494107539562737,
+    "mse": 1.8328111812312052e-05,
+    "rmse": 0.004281134407176684,
+    "r2": 0.9999999846978214,
+    "cv_r2_mean": 0.9990239282530583,
+    "cv_r2_std": 0.001185592964748849
+  },
+  "dataset_info": {
+    "total_samples": 600,
+    "class_distribution": {
+      "0": 200,
+      "1": 200,
+      "2": 200
+    },
+    "feature_columns": [
+      "avg_accuracy",
+      "avg_reaction_time",
+      "avg_hesitation",
+      "avg_engagement",
+      "accuracy_std",
+      "rt_variability",
+      "session_count",
+      "num_games",
+      "age"
+    ]
+  }
+}
