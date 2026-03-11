@@ -51,15 +51,15 @@ export const AssessmentPage: React.FC<Props> = ({ profile, onGameComplete }) => 
 
   if (activeGame) {
     return (
-      <div className="container mx-auto px-4 py-8 h-[calc(100vh-140px)] animate-pop-in">
-        <button 
-          onClick={() => setActiveGame(null)} 
-          className="mb-8 text-purple-600 font-black flex items-center gap-4 hover:scale-110 transition-all text-2xl group"
+      <div className="container mx-auto px-4 py-4 h-[calc(100vh-100px)] animate-pop-in flex flex-col">
+        <button
+          onClick={() => setActiveGame(null)}
+          className="mb-4 text-purple-600 font-black flex items-center gap-2 hover:scale-105 transition-all text-xl group"
         >
-          <span className="bg-white w-14 h-14 rounded-full flex items-center justify-center kids-shadow group-hover:bg-purple-100 transition-colors">←</span> 
+          <span className="bg-white w-10 h-10 rounded-full flex items-center justify-center kids-shadow group-hover:bg-purple-100 transition-colors">←</span>
           <span>Pick Another Adventure</span>
         </button>
-        <div className="h-full bg-white rounded-[4rem] kids-shadow p-12 border-4 border-purple-50 overflow-hidden relative shadow-2xl">
+        <div className="flex-1 bg-white rounded-[3rem] kids-shadow p-6 md:p-8 border-4 border-purple-50 overflow-y-auto relative shadow-2xl">
            {renderActiveGame()}
         </div>
       </div>
@@ -87,7 +87,7 @@ export const AssessmentPage: React.FC<Props> = ({ profile, onGameComplete }) => 
             <div className="text-9xl mb-10 rotate-360 drop-shadow-xl transition-all duration-700 ease-in-out">
               {game.icon}
             </div>
-            
+
             <div className="flex-1">
               <h3 className="text-4xl font-black text-purple-700 mb-4 tracking-tight">{game.title}</h3>
               <p className="text-gray-400 font-bold text-xl mb-8 leading-relaxed">{game.description}</p>

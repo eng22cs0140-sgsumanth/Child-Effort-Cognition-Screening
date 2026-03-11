@@ -1,37 +1,59 @@
 
-import React, { useState, useEffect } from 'react';
-import { Section, ChildProfile, ParentProfile, GameResult, UserRole, Observation } from './types';
+import React, { useState, useEffect, useRef } from 'react';
+import { Section, ChildProfile, ParentProfile, GameResult, UserRole, Observation, AssessmentSession, DomainIndices } from './types';
 import { AssessmentPage } from './components/AssessmentPage';
 import { HelpPage } from './components/HelpPage';
 import { ObservationsDiary } from './components/ObservationsDiary';
-import { calculateCECI } from './ceciAlgorithm';
-import { useCECICalculation } from './hooks/useCECICalculation';
+import { getCECIBreakdown, estimateCECIParameters, estimateCECIParametersFromSessions, computeDomainIndices, CECIResult } from './services/ceciService';
+import { ReportTemplate } from './components/ReportTemplate';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
+const SESSION_STORAGE_KEY = 'ceci_sessions';
 
 const App: React.FC = () => {
   const [section, setSection] = useState<Section>('welcome');
   const [history, setHistory] = useState<Section[]>([]);
   const [role, setRole] = useState<UserRole | null>(null);
   const [isDiaryOpen, setIsDiaryOpen] = useState(false);
-  
-  const [parent, setParent] = useState<ParentProfile>({ 
-    name: '', 
-    email: '', 
-    relationship: '' 
+
+  const [parent, setParent] = useState<ParentProfile>({
+    name: '',
+    email: '',
+    relationship: ''
   });
-  
-  const [child, setChild] = useState<ChildProfile>({ 
-    name: '', 
-    dob: '', 
-    age: 0, 
-    bloodGroup: '', 
-    height: 0, 
-    weight: 0, 
-    bmi: 0, 
+
+  const [child, setChild] = useState<ChildProfile>({
+    name: '',
+    dob: '',
+    age: 0,
+    bloodGroup: '',
+    height: 0,
+    weight: 0,
+    bmi: 0,
     conditions: '',
     observations: []
   });
-  
+
   const [results, setResults] = useState<GameResult[]>([]);
+
+  // Doctor assessment state
+  const [doctorForm, setDoctorForm] = useState({
+    examinerName: '',
+    caseNo: `CS-${Math.floor(Math.random() * 90000) + 10000}`,
+    referralSource: '',
+    presentingComplaints: '',
+    behaviorNotes: '',
+    diagnosis: '',
+    recommendations: '',
+    notes: ''
+  });
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  // Multi-session state (longitudinal monitoring per paper)
+  const currentSessionId = useRef(`session_${Date.now()}`).current;
+  const [sessionHistory, setSessionHistory] = useState<AssessmentSession[]>([]);
+  const [domainIndices, setDomainIndices] = useState<DomainIndices>({ VMI: 0, FRI: 0, LCI: 0, IFI: 0, API: 0, ATI: 0 });
 
   // Navigation with history
   const navigateTo = (newSection: Section) => {
@@ -53,16 +75,7 @@ const App: React.FC = () => {
   };
 
   const handleGameComplete = (result: GameResult) => {
-    // Add session number based on game history
-    const gameSessionNumber = results.filter(r => r.gameId === result.gameId).length + 1;
-
-    const enhancedResult: GameResult = {
-      ...result,
-      behavioralMetrics: result.data?.behavioralMetrics,
-      sessionNumber: gameSessionNumber
-    };
-
-    setResults(prev => [...prev, enhancedResult]);
+    setResults(prev => [...prev, result]);
     if (role === 'child') {
       navigateTo('assessment');
     } else {
@@ -114,7 +127,7 @@ const App: React.FC = () => {
       Object.keys(categories).forEach(catKey => {
         const cat = categories[catKey as keyof typeof categories];
         if (cat.games.includes(res.gameId)) {
-          cat.total += Math.min(100, res.score); 
+          cat.total += Math.min(100, res.score);
           cat.count++;
         }
       });
@@ -135,18 +148,52 @@ const App: React.FC = () => {
     ? Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / 4)
     : 0;
 
-  // Calculate CECI score using ML Pipeline with fallback to local calculation
-  const {
-    score: apiCeciScore,
-    source: ceciSource,
-    loading: ceciLoading,
-    error: ceciError,
-    apiAvailable,
-    calculate: calculateCeciScore
-  } = useCECICalculation(results, child.name || 'Child', { autoCalculate: true });
+  const [ceciAnalysis, setCeciAnalysis] = useState<CECIResult | null>(null);
 
-  // Use API result if available, otherwise fallback to local calculation
-  const ceciScore = apiCeciScore || calculateCECI(results, child.name || 'Child');
+  // Load session history from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (stored) setSessionHistory(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  // Save current session & recompute domain indices whenever results change
+  useEffect(() => {
+    if (results.length === 0) return;
+    setDomainIndices(computeDomainIndices(results));
+    const sessionAccuracy = results.reduce((sum, r) => sum + r.score / 100, 0) / results.length;
+    const session: AssessmentSession = { id: currentSessionId, date: Date.now(), results, sessionAccuracy };
+    setSessionHistory(prev => {
+      const updated = [...prev.filter(s => s.id !== currentSessionId), session];
+      try { localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+  }, [results]);
+
+  // Multi-session CECI analysis using paper's longitudinal formulation
+  useEffect(() => {
+    const analyze = async () => {
+      const prevSessions = sessionHistory.filter(s => s.id !== currentSessionId);
+      const params = estimateCECIParametersFromSessions(prevSessions, results);
+      const allAccuracies = [
+        ...prevSessions.map(s => s.sessionAccuracy),
+        ...(results.length > 0 ? [results.reduce((sum, r) => sum + r.score / 100, 0) / results.length] : [])
+      ];
+      try {
+        const analysis = await getCECIBreakdown(params.pid, params.varAcc, params.peff, allAccuracies);
+        setCeciAnalysis(analysis);
+      } catch (error) {
+        console.error("Analysis failed", error);
+      }
+    };
+    analyze();
+  }, [results, sessionHistory]);
+
+  // Derived session counts
+  const prevSessions = sessionHistory.filter(s => s.id !== currentSessionId);
+  const totalSessions = prevSessions.length + (results.length > 0 ? 1 : 0);
+  const ceciParams = estimateCECIParametersFromSessions(prevSessions, results);
 
   const handleRoleSelection = (selectedRole: UserRole) => {
     setRole(selectedRole);
@@ -159,50 +206,83 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDownloadReport = async () => {
+    setIsGeneratingPdf(true);
+    const element = document.getElementById('report-content');
+    if (!element) return;
+
+    try {
+      // Temporarily show the report for capture
+      element.style.display = 'block';
+      element.style.position = 'absolute';
+      element.style.left = '-9999px';
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Assessment_Report_${child.name || 'Child'}.pdf`);
+
+      element.style.display = 'none';
+      alert('Report generated successfully!');
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const renderSection = () => {
     switch (section) {
       case 'welcome':
         return (
-          <div className="container mx-auto px-4 py-20 text-center">
-            <div className="text-[12rem] md:text-[15rem] mb-8 animate-float drop-shadow-2xl inline-block cursor-pointer" onClick={() => navigateTo('welcome')}>
+          <div className="container mx-auto px-4 py-10 text-center">
+            <div className="text-8xl md:text-9xl mb-6 animate-float drop-shadow-xl inline-block cursor-pointer" onClick={() => navigateTo('welcome')}>
                <span className="select-none">🌟</span>
             </div>
-            
+
             <div className="animate-pop-in" style={{ animationDelay: '0.2s' }}>
-              <h1 className="text-6xl md:text-8xl font-black text-purple-700 mb-6 tracking-tight">
+              <h1 className="text-4xl md:text-6xl font-black text-purple-700 mb-4 tracking-tight">
                 Hi! I'm <span className="text-orange-500">Starry!</span>
               </h1>
-              <p className="text-2xl md:text-3xl text-purple-400 mb-16 font-semibold">
+              <p className="text-xl md:text-2xl text-purple-400 mb-10 font-bold">
                 Ready to explore your super powers?
               </p>
             </div>
-            
-            <div className="animate-pop-in max-w-5xl mx-auto mb-20 bg-white p-12 md:p-16 rounded-[4rem] kids-shadow border-4 border-purple-100 shadow-2xl" style={{ animationDelay: '0.4s' }}>
-              <h2 className="text-4xl md:text-5xl font-black text-purple-800 leading-tight tracking-tight mb-8">
+
+            <div className="animate-pop-in max-w-4xl mx-auto mb-12 bg-white p-8 md:p-12 rounded-[3rem] kids-shadow border-4 border-purple-100 shadow-xl" style={{ animationDelay: '0.4s' }}>
+              <h2 className="text-3xl md:text-4xl font-black text-purple-800 leading-tight tracking-tight mb-6">
                 Early Childhood <span className="text-orange-500">Intellectual Disability</span> Screening
               </h2>
-              <p className="text-xl md:text-2xl text-gray-600 font-medium leading-relaxed text-left md:text-center">
-                This project uses simple interactive games to understand how young children think and learn. 
-                By observing how a child plays—such as <span className="text-blue-500 font-bold">response time</span>, 
-                mistakes, and improvement over repeated sessions—the system can identify 
-                <span className="text-purple-600 font-bold">consistent learning difficulties</span> and separate them from 
-                temporary low effort or mood changes. This game-based approach is 
-                non-stressful, child-friendly, and supportive of early screening, 
-                helping educators and parents recognize potential challenges early and 
-                seek timely professional guidance.
+              <p className="text-lg md:text-xl text-gray-600 font-medium leading-relaxed text-left md:text-center">
+                This project uses simple interactive games to understand how young children think and learn.
+                By observing how a child plays—such as <span className="text-blue-500 font-bold">response time</span>,
+                mistakes, and improvement over repeated sessions—the system can identify
+                <span className="text-purple-600 font-bold">consistent learning difficulties</span> and separate them from
+                temporary low effort or mood changes.
               </p>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-8 justify-center items-center animate-pop-in" style={{ animationDelay: '0.8s' }}>
-              <button 
+            <div className="flex flex-col md:flex-row gap-6 justify-center items-center animate-pop-in" style={{ animationDelay: '0.8s' }}>
+              <button
                 onClick={() => navigateTo('login')}
-                className="bg-[#FF9F1C] hover:bg-orange-400 text-white font-black text-3xl px-20 py-8 rounded-[3rem] transition-all hover:scale-110 active:scale-95 kids-button-shadow min-w-[320px] flex items-center justify-center gap-4 group"
+                className="bg-[#FF9F1C] hover:bg-orange-400 text-white font-black text-2xl px-12 py-6 rounded-[2.5rem] transition-all hover:scale-110 active:scale-95 kids-button-shadow min-w-[280px] flex items-center justify-center gap-4 group"
               >
                 LET'S PLAY! <span className="group-hover:translate-x-2 transition-transform">🚀</span>
               </button>
-              <button 
+              <button
                 onClick={() => navigateTo('help')}
-                className="bg-white border-4 border-purple-500 text-purple-600 font-black text-3xl px-20 py-8 rounded-[3rem] transition-all hover:scale-105 active:scale-95 kids-button-shadow min-w-[320px]"
+                className="bg-white border-4 border-purple-500 text-purple-600 font-black text-2xl px-12 py-6 rounded-[2.5rem] transition-all hover:scale-105 active:scale-95 kids-button-shadow min-w-[280px]"
               >
                 TUTORIAL
               </button>
@@ -215,9 +295,9 @@ const App: React.FC = () => {
           <div className="container mx-auto px-4 py-20 text-center animate-pop-in">
             <h2 className="text-5xl font-black text-purple-700 mb-4">Welcome Back!</h2>
             <p className="text-2xl text-purple-400 font-bold mb-16">Who is logging in today?</p>
-            
+
             <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              <button 
+              <button
                 onClick={() => handleRoleSelection('child')}
                 className="bg-white p-12 rounded-[4rem] kids-shadow border-4 border-transparent hover:border-blue-400 group transition-all"
               >
@@ -226,7 +306,7 @@ const App: React.FC = () => {
                 <p className="text-gray-500 font-bold mt-2">I want to play games!</p>
               </button>
 
-              <button 
+              <button
                 onClick={() => handleRoleSelection('parent')}
                 className="bg-white p-12 rounded-[4rem] kids-shadow border-4 border-transparent hover:border-purple-400 group transition-all"
               >
@@ -235,7 +315,7 @@ const App: React.FC = () => {
                 <p className="text-gray-500 font-bold mt-2">Manage child profile</p>
               </button>
 
-              <button 
+              <button
                 onClick={() => handleRoleSelection('doctor')}
                 className="bg-white p-12 rounded-[4rem] kids-shadow border-4 border-transparent hover:border-green-400 group transition-all"
               >
@@ -280,15 +360,15 @@ const App: React.FC = () => {
                 </div>
                 <div className="col-span-full md:col-span-1">
                   <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Birthday</label>
-                  <input type="date" className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl" value={child.dob} onChange={e => { 
-                    const age = calculateAge(e.target.value); 
-                    setChild({...child, dob: e.target.value, age}); 
+                  <input type="date" className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl" value={child.dob} onChange={e => {
+                    const age = calculateAge(e.target.value);
+                    setChild({...child, dob: e.target.value, age});
                   }} />
                 </div>
 
                 <div className="col-span-full md:col-span-1">
                   <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Blood Group</label>
-                  <select 
+                  <select
                     className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl appearance-none"
                     value={child.bloodGroup}
                     onChange={e => setChild({...child, bloodGroup: e.target.value})}
@@ -303,10 +383,10 @@ const App: React.FC = () => {
                 <div className="col-span-full md:col-span-1 grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Height (cm)</label>
-                    <input 
-                      type="number" 
-                      className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl" 
-                      value={child.height || ''} 
+                    <input
+                      type="number"
+                      className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl"
+                      value={child.height || ''}
                       onChange={e => {
                         const h = parseFloat(e.target.value) || 0;
                         setChild({...child, height: h, bmi: calculateBMI(h, child.weight)});
@@ -316,10 +396,10 @@ const App: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Weight (kg)</label>
-                    <input 
-                      type="number" 
-                      className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl" 
-                      value={child.weight || ''} 
+                    <input
+                      type="number"
+                      className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl"
+                      value={child.weight || ''}
                       onChange={e => {
                         const w = parseFloat(e.target.value) || 0;
                         setChild({...child, weight: w, bmi: calculateBMI(child.height, w)});
@@ -342,9 +422,9 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <button 
-                disabled={!child.name || !child.dob} 
-                onClick={() => navigateTo('results')} 
+              <button
+                disabled={!child.name || !child.dob}
+                onClick={() => navigateTo('results')}
                 className="w-full mt-12 bg-purple-600 text-white py-7 rounded-[2.5rem] font-black text-2xl hover:scale-105 transition-all kids-button-shadow uppercase"
               >
                 Save & View Report ➜
@@ -378,240 +458,340 @@ const App: React.FC = () => {
           <div className="container mx-auto px-6 py-10 max-w-7xl animate-pop-in">
             <header className="mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="text-center md:text-left">
-                <h1 className="text-5xl font-black text-purple-700 mb-2">Development Report</h1>
-                <p className="text-gray-500 font-bold text-2xl">
-                  {role === 'doctor' ? `Analyzing patient: ${child.name || 'Anonymous'}` : `Tracking ${child.name || 'your child'}'s progress`}
+                <h1 className="text-5xl font-black text-slate-800 mb-2">
+                  {role === 'doctor' ? 'Clinical Dashboard' : 'Development Report'}
+                </h1>
+                <p className="text-slate-500 font-bold text-2xl">
+                  {role === 'doctor' ? `Patient: ${child.name || 'Anonymous'}` : `Tracking ${child.name || 'your child'}'s progress`}
                 </p>
               </div>
-              {role === 'parent' && (
-                <button 
-                  onClick={() => navigateTo('onboarding-child')}
-                  className="bg-purple-600 text-white px-10 py-4 rounded-[2rem] font-black text-xl hover:bg-purple-500 transition-all kids-button-shadow"
-                >
-                  ⚙️ Update Profile
-                </button>
-              )}
+              <div className="flex gap-4">
+                {role === 'parent' && (
+                  <button
+                    onClick={() => navigateTo('onboarding-child')}
+                    className="bg-purple-600 text-white px-10 py-4 rounded-[2rem] font-black text-xl hover:bg-purple-500 transition-all kids-button-shadow"
+                  >
+                    ⚙️ Update Profile
+                  </button>
+                )}
+                {role === 'doctor' && (
+                  <div className="bg-emerald-100 text-emerald-700 px-6 py-3 rounded-2xl font-black flex items-center gap-2 border-2 border-emerald-200">
+                    <span className="animate-pulse">●</span> LIVE CLINICAL MODE
+                  </div>
+                )}
+              </div>
             </header>
 
-            <div className="space-y-12">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                {[
-                  { label: 'Age', value: `${child.age} yrs`, icon: '🎂', color: 'bg-blue-100 text-blue-600' },
-                  { label: 'Blood Group', value: child.bloodGroup || 'N/A', icon: '🩸', color: 'bg-red-100 text-red-600' },
-                  { label: 'BMI Score', value: child.bmi || 'N/A', icon: '⚖️', color: 'bg-green-100 text-green-600' },
-                  { label: 'Height/Weight', value: `${child.height || 0}cm / ${child.weight || 0}kg`, icon: '📏', color: 'bg-purple-100 text-purple-600' }
-                ].map((stat, i) => (
-                  <div key={i} className="bg-white p-8 rounded-[3rem] kids-shadow border-4 border-purple-50 flex items-center gap-6">
-                    <div className={`${stat.color} w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shadow-inner`}>
-                      {stat.icon}
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">{stat.label}</p>
-                      <p className="text-2xl font-black text-gray-800">{stat.value}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* CECI Score Display */}
-              <div className={`bg-white p-12 rounded-[5rem] kids-shadow border-8 ${
-                ceciScore.riskBand === 'green' ? 'border-green-300' :
-                ceciScore.riskBand === 'amber' ? 'border-yellow-300' :
-                'border-red-300'
-              }`}>
-                <div className="flex flex-col md:flex-row gap-8 items-center">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-6">
-                      <h2 className="text-4xl font-black text-purple-700">CECI Assessment</h2>
-                      <span className={`px-6 py-3 rounded-[2rem] font-black text-xl ${
-                        ceciScore.riskBand === 'green' ? 'bg-green-100 text-green-700' :
-                        ceciScore.riskBand === 'amber' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        {ceciScore.riskBand === 'green' ? '✓ Typical Development' :
-                         ceciScore.riskBand === 'amber' ? '⚠ Monitor Closely' :
-                         '⚡ Specialist Recommended'}
-                      </span>
-                    </div>
-                    <p className="text-gray-600 font-bold text-lg mb-4 leading-relaxed">
-                      {ceciScore.recommendation}
-                    </p>
-                    <div className="grid grid-cols-2 gap-4 mt-6">
-                      <div className="bg-purple-50 p-4 rounded-3xl">
-                        <p className="text-xs font-black text-purple-400 uppercase mb-1">Overall Score</p>
-                        <p className="text-4xl font-black text-purple-700">{ceciScore.overall}%</p>
-                      </div>
-                      <div className="bg-blue-50 p-4 rounded-3xl">
-                        <p className="text-xs font-black text-blue-400 uppercase mb-1">Confidence</p>
-                        <p className="text-4xl font-black text-blue-700">{ceciScore.confidence}%</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex-1 bg-gray-50 p-8 rounded-[3rem]">
-                    <h3 className="text-2xl font-black text-gray-700 mb-6">Model Analysis</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="font-bold text-gray-600">Feature-Based Model</span>
-                          <span className="font-black text-purple-600">{ceciScore.treeBasedScore}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 h-4 rounded-full">
-                          <div className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full" style={{ width: `${ceciScore.treeBasedScore}%` }}></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="font-bold text-gray-600">Temporal Model</span>
-                          <span className="font-black text-blue-600">{ceciScore.temporalScore}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 h-4 rounded-full">
-                          <div className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full" style={{ width: `${ceciScore.temporalScore}%` }}></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between mb-2">
-                          <span className="font-bold text-gray-600">Bayesian Calibration</span>
-                          <span className="font-black text-green-600">{ceciScore.bayesianCalibration}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 h-4 rounded-full">
-                          <div className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full" style={{ width: `${ceciScore.bayesianCalibration}%` }}></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-6 p-4 bg-white rounded-2xl border-2 border-gray-100">
-                      <p className="text-xs text-gray-500 font-bold">
-                        Sessions Analyzed: {results.length} | Multi-model hybrid approach combining Random Forest, LSTM/GRU temporal analysis, and Bayesian uncertainty quantification.
-                      </p>
-                      <div className="mt-3 flex items-center gap-3">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-                          ceciSource === 'api' ? 'bg-green-100 text-green-700' :
-                          ceciSource === 'local' ? 'bg-gray-100 text-gray-600' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {ceciLoading ? '⏳ Calculating...' :
-                           ceciSource === 'api' ? '✓ ML Pipeline' :
-                           ceciSource === 'local' ? '⚠ Local Mode' :
-                           'Initializing...'}
-                        </span>
-                        {ceciError && (
-                          <span className="text-[10px] text-orange-600 font-bold">
-                            {ceciError}
-                          </span>
-                        )}
-                        {!apiAvailable && !ceciLoading && (
-                          <span className="text-[10px] text-gray-500 font-bold">
-                            (API offline - using local algorithm)
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+            {/* High-Risk Alert Banner (paper: alert systems in Visualization Layer) */}
+            {ceciAnalysis?.riskBand === 'red' && (
+              <div className="bg-red-50 border-2 border-red-300 rounded-3xl p-6 mb-8 flex items-center gap-5">
+                <span className="text-4xl">🚨</span>
+                <div>
+                  <p className="text-red-800 font-black text-xl">High Risk Alert — Specialist Referral Recommended</p>
+                  <p className="text-red-600 font-bold text-sm mt-1">CECI score indicates persistent cognitive difficulty patterns. A comprehensive clinical assessment is strongly recommended.</p>
                 </div>
               </div>
+            )}
 
-              <div className="bg-white p-16 rounded-[5rem] kids-shadow border-4 border-purple-50">
-                <h2 className="text-4xl font-black text-purple-700 mb-16 text-center">Development Performance Graph</h2>
-                <div className="flex flex-col items-center">
-                  <div className="relative w-full flex justify-center py-6">
-                    <svg width="450" height="450" viewBox="0 0 400 400" className="overflow-visible drop-shadow-2xl">
-                      {[20, 40, 60, 80, 100].map(r => (
-                        <circle key={r} cx="200" cy="200" r={(r/100) * radius} fill="none" stroke="#F1F5F9" strokeWidth="2" />
-                      ))}
-                      {[0, 90, 180, 270].map(a => {
-                        const p = getPoint(100, a);
-                        return <line key={a} x1="200" y1="200" x2={p.x} y2={p.y} stroke="#F1F5F9" strokeWidth="2" />;
-                      })}
-                      <polygon 
-                        points={radarPath} 
-                        fill="rgba(34, 211, 238, 0.3)" 
-                        stroke="#22d3ee" 
-                        strokeWidth="6" 
-                        strokeLinejoin="round"
-                        className="transition-all duration-1000 ease-out"
-                      />
-                      {radarPoints.map((p, i) => (
-                        <circle key={i} cx={p.x} cy={p.y} r="7" fill="#22d3ee" className="drop-shadow-md" />
-                      ))}
-                      <text x="200" y="-15" textAnchor="middle" className="text-[16px] font-black fill-purple-700 uppercase">Cognitive</text>
-                      <text x="200" y="8" textAnchor="middle" className="text-[14px] font-bold fill-gray-400">{scores.cognitive}%</text>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Sidebar: Patient Vitals */}
+              <div className="lg:col-span-4 space-y-6">
+                {/* Session History Summary (longitudinal monitoring per paper) */}
+                <div className="bg-gradient-to-br from-purple-600 to-indigo-600 p-6 rounded-[2.5rem] shadow-xl text-white">
+                  <p className="text-purple-200 font-black text-xs uppercase tracking-widest mb-1">Longitudinal Monitoring</p>
+                  <div className="flex items-end gap-3">
+                    <span className="text-5xl font-black">{totalSessions}</span>
+                    <span className="text-purple-200 font-bold text-lg mb-1">Session{totalSessions !== 1 ? 's' : ''} Recorded</span>
+                  </div>
+                  {totalSessions < 2 && (
+                    <p className="text-purple-300 text-xs font-bold mt-2">Play games in another visit to enable cross-session Var(Acc) analysis</p>
+                  )}
+                  {totalSessions >= 2 && (
+                    <p className="text-purple-300 text-xs font-bold mt-2">Multi-session CECI active — Var(Acc) computed across {totalSessions} sessions</p>
+                  )}
+                </div>
 
-                      <text x="360" y="200" textAnchor="start" className="text-[16px] font-black fill-purple-700 uppercase">Social</text>
-                      <text x="360" y="220" textAnchor="start" className="text-[14px] font-bold fill-gray-400">{scores.social}%</text>
-
-                      <text x="200" y="415" textAnchor="middle" className="text-[16px] font-black fill-purple-700 uppercase">Language</text>
-                      <text x="200" y="435" textAnchor="middle" className="text-[14px] font-bold fill-gray-400">{scores.language}%</text>
-
-                      <text x="40" y="200" textAnchor="end" className="text-[16px] font-black fill-purple-700 uppercase">Attention</text>
-                      <text x="40" y="220" textAnchor="end" className="text-[14px] font-bold fill-gray-400">{scores.attention}%</text>
-                    </svg>
+                <div className="bg-white p-8 rounded-[3rem] shadow-xl border-2 border-slate-100">
+                  <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2">
+                    <span className="text-2xl">👤</span> Patient Vitals
+                  </h3>
+                  <div className="space-y-4">
+                    {[
+                      { label: 'Age', value: `${child.age} yrs`, icon: '🎂', color: 'text-blue-500' },
+                      { label: 'Blood Group', value: child.bloodGroup || 'N/A', icon: '🩸', color: 'text-red-500' },
+                      { label: 'BMI Score', value: child.bmi || 'N/A', icon: '⚖️', color: 'text-green-500' },
+                      { label: 'Height', value: `${child.height || 0} cm`, icon: '📏', color: 'text-purple-500' },
+                      { label: 'Weight', value: `${child.weight || 0} kg`, icon: '🏋️', color: 'text-orange-500' }
+                    ].map((stat, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{stat.icon}</span>
+                          <span className="text-sm font-black text-slate-400 uppercase">{stat.label}</span>
+                        </div>
+                        <span className={`text-lg font-black ${stat.color}`}>{stat.value}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 {role === 'doctor' && (
-                  <div className="bg-white p-14 rounded-[4rem] kids-shadow border-4 border-purple-50 col-span-full">
-                    <h3 className="text-3xl font-black text-purple-700 mb-10 flex items-center gap-4">
-                      <span>📒</span> Parent Observations Diary
+                  <div className="bg-white p-8 rounded-[3rem] shadow-xl border-2 border-slate-100">
+                    <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2">
+                      <span>📒</span> Parent Observations
                     </h3>
-                    <div className="grid md:grid-cols-2 gap-6 max-h-[500px] overflow-y-auto pr-4">
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                       {child.observations.length === 0 ? (
-                        <p className="text-gray-400 font-bold italic col-span-full">The parent hasn't added any diary notes yet.</p>
+                        <p className="text-slate-400 font-bold italic text-center py-4">No diary entries available.</p>
                       ) : (
                         child.observations.map(obs => (
-                          <div key={obs.id} className="bg-[#fdfdfd] p-8 rounded-3xl border-l-[15px] border-orange-200 kids-shadow relative bg-[linear-gradient(#e1e9ff_1px,transparent_1px)] bg-[size:100%_2rem] leading-[2rem]">
-                             <div className="text-[10px] text-purple-300 font-black absolute top-2 right-4 uppercase tracking-tighter">
+                          <div key={obs.id} className="bg-slate-50 p-5 rounded-2xl border-l-8 border-orange-300 relative">
+                             <div className="text-[10px] text-slate-300 font-black absolute top-2 right-4 uppercase">
                                 {new Date(obs.timestamp).toLocaleDateString()}
                              </div>
-                             <p className="text-gray-700 font-bold pt-2">{obs.text}</p>
+                             <p className="text-slate-700 font-bold text-sm pt-2">{obs.text}</p>
                           </div>
                         ))
                       )}
                     </div>
                   </div>
                 )}
+              </div>
 
-                <div className="bg-white p-14 rounded-[4rem] kids-shadow border-4 border-purple-50">
-                  <h3 className="text-3xl font-black text-purple-700 mb-12">Summary Metrics</h3>
-                  <div className="space-y-10">
-                    {[
-                      { label: 'Overall Growth', score: overallScore, color: 'from-orange-400 to-orange-300' },
-                      { label: 'Health Index', score: child.bmi > 0 ? 92 : 0, color: 'from-green-400 to-green-300' }
-                    ].map((metric, idx) => (
-                      <div key={idx}>
-                        <div className="flex justify-between mb-4 items-end">
-                          <span className="font-black text-gray-700 text-2xl">{metric.label}</span>
-                          <span className="font-black text-purple-700 text-3xl">{metric.score}%</span>
+              {/* Main Content: Analysis & Assessment */}
+              <div className="lg:col-span-8 space-y-8">
+                {/* Performance Radar */}
+                <div className="bg-white p-10 rounded-[4rem] shadow-xl border-2 border-slate-100">
+                  <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-2xl font-black text-slate-800">Developmental Performance</h2>
+                    <div className="flex gap-2">
+                      {Object.entries(scores).map(([key, val]) => (
+                        <div key={key} className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">
+                          {key}: {val}%
                         </div>
-                        <div className="w-full bg-gray-100 h-10 rounded-full overflow-hidden shadow-inner border-2 border-white">
-                          <div className={`h-full bg-gradient-to-r ${metric.color} rounded-full transition-all duration-1000 ease-out`} style={{ width: `${metric.score}%` }}></div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex justify-center">
+                    <svg width="350" height="350" viewBox="0 0 400 400" className="overflow-visible drop-shadow-2xl">
+                      {[20, 40, 60, 80, 100].map(r => (
+                        <circle key={r} cx="200" cy="200" r={(r/100) * radius} fill="none" stroke="#F1F5F9" strokeWidth="1" />
+                      ))}
+                      {[0, 90, 180, 270].map(a => {
+                        const p = getPoint(100, a);
+                        return <line key={a} x1="200" y1="200" x2={p.x} y2={p.y} stroke="#F1F5F9" strokeWidth="1" />;
+                      })}
+                      <polygon
+                        points={radarPath}
+                        fill="rgba(99, 102, 241, 0.2)"
+                        stroke="#6366f1"
+                        strokeWidth="4"
+                        strokeLinejoin="round"
+                        className="transition-all duration-1000 ease-out"
+                      />
+                      {radarPoints.map((p, i) => (
+                        <circle key={i} cx={p.x} cy={p.y} r="5" fill="#6366f1" />
+                      ))}
+                      <text x="200" y="-10" textAnchor="middle" className="text-[12px] font-black fill-slate-400 uppercase">Cognitive</text>
+                      <text x="360" y="200" textAnchor="start" className="text-[12px] font-black fill-slate-400 uppercase">Social</text>
+                      <text x="200" y="410" textAnchor="middle" className="text-[12px] font-black fill-slate-400 uppercase">Language</text>
+                      <text x="40" y="200" textAnchor="end" className="text-[12px] font-black fill-slate-400 uppercase">Attention</text>
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Domain Assessment Indices (paper: VMI, FRI, LCI, IFI, API, ATI) */}
+                <div className="bg-white p-10 rounded-[4rem] shadow-xl border-2 border-slate-100">
+                  <div className="mb-8">
+                    <h2 className="text-2xl font-black text-slate-800">Domain Assessment Indices</h2>
+                    <p className="text-slate-400 font-bold text-sm mt-1">Neuropsychological domain scores derived from game telemetry</p>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {([
+                      { label: 'VMI', full: 'Visual-Motor Integration', key: 'VMI' as const, bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700', sub: 'text-blue-400', val: 'text-blue-900', bar: 'bg-blue-500' },
+                      { label: 'FRI', full: 'Fluid Reasoning Index', key: 'FRI' as const, bg: 'bg-violet-50', border: 'border-violet-100', text: 'text-violet-700', sub: 'text-violet-400', val: 'text-violet-900', bar: 'bg-violet-500' },
+                      { label: 'LCI', full: 'Language Comprehension', key: 'LCI' as const, bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', sub: 'text-emerald-400', val: 'text-emerald-900', bar: 'bg-emerald-500' },
+                      { label: 'IFI', full: 'Inhibitory Function', key: 'IFI' as const, bg: 'bg-orange-50', border: 'border-orange-100', text: 'text-orange-700', sub: 'text-orange-400', val: 'text-orange-900', bar: 'bg-orange-500' },
+                      { label: 'API', full: 'Attention Processing', key: 'API' as const, bg: 'bg-rose-50', border: 'border-rose-100', text: 'text-rose-700', sub: 'text-rose-400', val: 'text-rose-900', bar: 'bg-rose-500' },
+                      { label: 'ATI', full: 'Attention-Task Integration', key: 'ATI' as const, bg: 'bg-indigo-50', border: 'border-indigo-100', text: 'text-indigo-700', sub: 'text-indigo-400', val: 'text-indigo-900', bar: 'bg-indigo-500' },
+                    ] as const).map(idx => (
+                      <div key={idx.label} className={`${idx.bg} p-5 rounded-3xl border ${idx.border}`}>
+                        <div className={`${idx.text} font-black text-lg`}>{idx.label}</div>
+                        <div className={`${idx.sub} text-[10px] font-bold uppercase tracking-wide mb-2`}>{idx.full}</div>
+                        <div className={`${idx.val} font-black text-3xl mb-2`}>
+                          {domainIndices[idx.key]}<span className="text-sm font-bold ml-0.5">%</span>
+                        </div>
+                        <div className="w-full bg-white/60 rounded-full h-1.5">
+                          <div className={`${idx.bar} h-1.5 rounded-full transition-all duration-700`} style={{ width: `${domainIndices[idx.key]}%` }} />
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="bg-white p-14 rounded-[4rem] kids-shadow border-4 border-purple-50">
-                  <h3 className="text-3xl font-black text-purple-700 mb-10">Detailed Analysis</h3>
-                  <div className="flex flex-col gap-6">
-                      {role === 'doctor' ? (
-                        <div className="p-8 bg-blue-50 rounded-[3rem] border-4 border-blue-100">
-                           <h4 className="font-black text-blue-700 text-xl mb-4">Doctor's Clinical Notes</h4>
-                           <div className="mb-4 text-sm text-blue-600 font-black uppercase tracking-widest">Snapshot: {child.bloodGroup || 'Unknown BG'} • BMI {child.bmi} • Age {child.age}</div>
-                           <textarea className="w-full p-5 rounded-3xl bg-white border-2 border-blue-100 outline-none min-h-[140px] font-bold text-gray-700" placeholder="Type clinical findings..."></textarea>
-                           <button className="mt-6 w-full bg-blue-600 text-white py-5 rounded-[2rem] font-black text-xl kids-button-shadow">Submit Official Assessment</button>
+                {/* CECI Analysis */}
+                <div className="bg-white p-10 rounded-[4rem] shadow-xl border-2 border-slate-100">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                    <div>
+                      <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                        <span>🧠</span> CECI Screening Analysis
+                      </h3>
+                      <p className="text-slate-400 font-bold text-sm">
+                        Child Effort-Cognition Index · {totalSessions} session{totalSessions !== 1 ? 's' : ''} recorded
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                      <div className="text-right">
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Index Score</div>
+                        <div className="text-3xl font-black text-slate-800">{ceciAnalysis?.ceciScore.toFixed(3) || '0.000'}</div>
+                      </div>
+                      <div
+                        className="px-5 py-2 rounded-xl text-white font-black text-sm shadow-md"
+                        style={{ backgroundColor: ceciAnalysis?.riskColor || '#cbd5e1' }}
+                      >
+                        {ceciAnalysis?.riskLabel || 'Analysis Pending'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {ceciParams.insufficientData ? (
+                    <div className="bg-amber-50 border-2 border-dashed border-amber-200 p-6 rounded-3xl text-center">
+                      <p className="text-amber-700 font-black text-lg mb-1">⚠️ Insufficient Data for Full Analysis</p>
+                      <p className="text-amber-600 text-sm font-bold">At least 2 assessment sessions are required to calculate cross-session Var(Acc) and effort metrics per the CECI model. Complete more games and revisit.</p>
+                    </div>
+                  ) : ceciAnalysis ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                      {[
+                        { label: 'PID', value: ceciAnalysis.components.pid.value, color: 'blue', interpretation: ceciAnalysis.components.pid.interpretation },
+                        { label: 'Consistency', value: ceciAnalysis.components.consistency.value, color: 'emerald', interpretation: ceciAnalysis.components.consistency.interpretation },
+                        { label: 'Effort', value: ceciAnalysis.components.effort.value, color: 'orange', interpretation: ceciAnalysis.components.effort.interpretation }
+                      ].map((comp, i) => (
+                        <div key={i} className={`bg-${comp.color}-50 p-6 rounded-3xl border border-${comp.color}-100`}>
+                          <div className={`text-${comp.color}-700 font-black uppercase text-[10px] tracking-widest mb-2`}>{comp.label}</div>
+                          <div className={`text-2xl font-black text-${comp.color}-900 mb-1`}>{(comp.value * 100).toFixed(1)}%</div>
+                          <p className={`text-${comp.color}-600 text-[10px] font-bold leading-tight`}>{comp.interpretation}</p>
                         </div>
-                      ) : (
-                        <div className="p-10 bg-orange-50 rounded-[3rem] border-4 border-orange-100">
-                          <p className="text-orange-700 font-black text-2xl mb-4">Daily Growth Tip 💡</p>
-                          <p className="text-gray-600 font-bold text-lg leading-relaxed mb-8">
-                            "Based on the results, focused language activities like reading together would be very beneficial for {child.name} this week!"
-                          </p>
-                          <button onClick={() => navigateTo('assessment')} className="w-full bg-[#FF9F1C] text-white py-5 rounded-[2rem] font-black text-xl kids-button-shadow">Play Discovery Games</button>
-                        </div>
-                      )}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-10 text-center text-slate-400 font-bold italic">Calculating metrics...</div>
+                  )}
+
+                  <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                    <h4 className="text-sm font-black text-slate-800 mb-2 flex items-center gap-2">
+                      <span>📋</span> Clinical Interpretation Note
+                    </h4>
+                    <p className="text-slate-600 font-bold text-sm leading-relaxed italic">
+                      "{ceciAnalysis?.clinicalNote || 'Analysis in progress...'}"
+                    </p>
                   </div>
                 </div>
+
+                {/* Official Assessment Form - DOCTOR ONLY */}
+                {role === 'doctor' && (
+                  <div className="bg-slate-800 p-10 rounded-[4rem] shadow-2xl text-white">
+                    <h4 className="font-black text-2xl mb-8 flex items-center gap-3">
+                      <span className="bg-white/10 p-3 rounded-2xl">🩺</span> Official Clinical Assessment
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Examiner Name</label>
+                        <input
+                          type="text"
+                          className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.examinerName}
+                          onChange={e => setDoctorForm({...doctorForm, examinerName: e.target.value})}
+                          placeholder="Dr. Name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Case Number</label>
+                        <input
+                          type="text"
+                          className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.caseNo}
+                          onChange={e => setDoctorForm({...doctorForm, caseNo: e.target.value})}
+                        />
+                      </div>
+                      <div className="col-span-full">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Referral Source & Complaints</label>
+                        <input
+                          type="text"
+                          className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all mb-4"
+                          value={doctorForm.referralSource}
+                          onChange={e => setDoctorForm({...doctorForm, referralSource: e.target.value})}
+                          placeholder="Who referred the child?"
+                        />
+                        <textarea
+                          className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.presentingComplaints}
+                          onChange={e => setDoctorForm({...doctorForm, presentingComplaints: e.target.value})}
+                          placeholder="Presenting complaints..."
+                          rows={2}
+                        ></textarea>
+                      </div>
+                      <div className="col-span-full">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Behavioral Observations</label>
+                        <textarea
+                          className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.behaviorNotes}
+                          onChange={e => setDoctorForm({...doctorForm, behaviorNotes: e.target.value})}
+                          placeholder="How was the child during the session?"
+                          rows={2}
+                        ></textarea>
+                      </div>
+                      <div className="col-span-full">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Tentative Diagnosis</label>
+                        <input
+                          type="text"
+                          className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.diagnosis}
+                          onChange={e => setDoctorForm({...doctorForm, diagnosis: e.target.value})}
+                          placeholder="Diagnosis code or description"
+                        />
+                      </div>
+                      <div className="col-span-full">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Clinical Findings & Notes</label>
+                        <textarea
+                          className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none min-h-[140px] font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.notes}
+                          onChange={e => setDoctorForm({...doctorForm, notes: e.target.value})}
+                          placeholder="Detailed clinical findings..."
+                        ></textarea>
+                      </div>
+                      <div className="col-span-full">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Recommendations (one per line)</label>
+                        <textarea
+                          className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.recommendations}
+                          onChange={e => setDoctorForm({...doctorForm, recommendations: e.target.value})}
+                          placeholder="1. Recommendation one&#10;2. Recommendation two..."
+                          rows={3}
+                        ></textarea>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleDownloadReport}
+                      disabled={isGeneratingPdf || !doctorForm.examinerName}
+                      className="w-full bg-emerald-500 text-white py-6 rounded-[2rem] font-black text-2xl shadow-xl flex items-center justify-center gap-4 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isGeneratingPdf ? 'GENERATING PDF...' : 'SUBMIT & PRINT PDF REPORT 📄'}
+                    </button>
+                    {!doctorForm.examinerName && <p className="text-center text-emerald-400 text-xs font-bold mt-4">Please enter Examiner Name to enable printing</p>}
+                  </div>
+                )}
+
+                {/* Parent Growth Tip - PARENT ONLY */}
+                {role === 'parent' && (
+                  <div className="bg-white p-10 rounded-[4rem] shadow-xl border-2 border-orange-100">
+                    <p className="text-orange-700 font-black text-2xl mb-4">Daily Growth Tip 💡</p>
+                    <p className="text-gray-600 font-bold text-lg leading-relaxed mb-8">
+                      "Based on the results, focused language activities like reading together would be very beneficial for {child.name} this week!"
+                    </p>
+                    <button onClick={() => navigateTo('assessment')} className="w-full bg-[#FF9F1C] text-white py-5 rounded-[2rem] font-black text-xl kids-button-shadow">Play Discovery Games</button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -644,7 +824,7 @@ const App: React.FC = () => {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-6">
             {section !== 'welcome' && (
-              <button 
+              <button
                 onClick={goBack}
                 className="bg-purple-100 text-purple-700 w-14 h-14 rounded-full flex items-center justify-center text-3xl kids-shadow hover:scale-110 active:scale-95 transition-all"
               >
@@ -655,7 +835,7 @@ const App: React.FC = () => {
               <span className="text-5xl drop-shadow-md group-hover:rotate-12 transition-transform">🌟</span> KidsScreen
             </button>
           </div>
-          
+
           <div className="hidden md:flex gap-2 p-1.5 bg-gray-100 rounded-full shadow-inner border border-gray-200">
             {navItems.map(item => (
               <button
@@ -673,7 +853,7 @@ const App: React.FC = () => {
 
           <div className="flex items-center gap-4">
             {role ? (
-              <button 
+              <button
                 onClick={() => { setRole(null); setSection('welcome'); setHistory([]); }}
                 className="bg-gray-100 text-gray-500 px-8 py-3 rounded-full font-black text-lg hover:bg-gray-200 transition-all shadow-sm"
               >
@@ -694,7 +874,7 @@ const App: React.FC = () => {
       </main>
 
       {role === 'parent' && (
-        <button 
+        <button
           onClick={() => setIsDiaryOpen(true)}
           className="fixed bottom-10 right-10 z-[80] bg-orange-400 text-white w-20 h-20 rounded-full flex items-center justify-center text-4xl kids-button-shadow hover:scale-110 transition-all animate-bounce"
         >
@@ -702,13 +882,36 @@ const App: React.FC = () => {
         </button>
       )}
 
-      <ObservationsDiary 
-        isOpen={isDiaryOpen} 
-        onClose={() => setIsDiaryOpen(false)} 
+      <ObservationsDiary
+        isOpen={isDiaryOpen}
+        onClose={() => setIsDiaryOpen(false)}
         observations={child.observations}
         onAdd={handleAddObservation}
         childName={child.name}
       />
+
+      {/* Hidden Report Template for PDF Generation */}
+      <div style={{ display: 'none' }}>
+        {ceciAnalysis && (
+          <ReportTemplate
+            child={child}
+            parentName={parent.name}
+            doctorNotes={doctorForm.notes}
+            ceciAnalysis={ceciAnalysis}
+            scores={scores}
+            overallScore={overallScore}
+            examinerName={doctorForm.examinerName}
+            caseNo={doctorForm.caseNo}
+            referralSource={doctorForm.referralSource}
+            presentingComplaints={doctorForm.presentingComplaints}
+            behaviorNotes={doctorForm.behaviorNotes}
+            diagnosis={doctorForm.diagnosis}
+            recommendations={doctorForm.recommendations.split('\n').filter(r => r.trim())}
+            domainIndices={domainIndices}
+            totalSessions={totalSessions}
+          />
+        )}
+      </div>
 
       <footer className="py-20 text-center transition-all bg-white text-gray-400 border-t-8 border-purple-50">
         <div className="container mx-auto px-4">

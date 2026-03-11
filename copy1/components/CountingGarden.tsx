@@ -37,29 +37,29 @@ export const CountingGarden: React.FC<Props> = ({ profile, onComplete }) => {
   };
 
   return (
-    <div className="flex flex-col h-full text-center">
-      <h2 className="text-3xl font-bold text-green-600 mb-4">How many {items[0]?.char}s are in the garden?</h2>
-      <div className="flex-1 relative bg-green-50 rounded-3xl border-8 border-green-100 mb-8 overflow-hidden">
+    <div className="flex flex-col h-full text-center px-4">
+      <h2 className="text-2xl md:text-3xl font-black text-green-600 mb-4">How many {items[0]?.char}s?</h2>
+      <div className="flex-1 relative bg-green-50 rounded-[2rem] border-4 border-green-100 mb-6 overflow-hidden min-h-[200px]">
         {items.map((item, i) => (
-          <div 
-            key={i} 
-            className="absolute text-6xl animate-pulse" 
+          <div
+            key={i}
+            className="absolute text-4xl md:text-5xl animate-pulse"
             style={{ left: `${item.x}%`, top: `${item.y}%` }}
           >
             {item.char}
           </div>
         ))}
       </div>
-      
-      {message && <div className="text-2xl font-bold text-orange-500 mb-4">{message}</div>}
 
-      <div className="flex justify-center gap-4 flex-wrap">
+      {message && <div className="text-xl font-black text-orange-500 mb-4 animate-pop-in">{message}</div>}
+
+      <div className="flex justify-center gap-3 flex-wrap mb-4">
         {[target - 1, target, target + 1, target + 2].sort(() => 0.5 - Math.random()).map(num => (
           num > 0 && (
             <button
               key={num}
               onClick={() => checkAnswer(num)}
-              className="w-20 h-20 text-3xl font-bold bg-white rounded-2xl kids-button-shadow text-green-600 border-4 border-green-100 hover:scale-110"
+              className="w-16 h-16 text-2xl font-black bg-white rounded-xl kids-button-shadow text-green-600 border-2 border-green-100 hover:scale-110 active:scale-90 transition-all"
             >
               {num}
             </button>

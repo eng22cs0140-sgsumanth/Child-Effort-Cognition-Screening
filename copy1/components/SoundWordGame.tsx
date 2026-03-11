@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ChildProfile } from '../types';
 
@@ -18,55 +17,85 @@ const ITEMS = [
 
 export const SoundWordGame: React.FC<Props> = ({ profile, onComplete }) => {
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [options, setOptions] = useState<typeof ITEMS>([]);
+  const [roundData, setRoundData] = useState<{ target: typeof ITEMS[0], options: typeof ITEMS } | null>(null);
   const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState('');
-
-  const target = ITEMS[currentIdx];
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
+    const target = ITEMS[currentIdx];
     const others = ITEMS.filter((_, i) => i !== currentIdx).sort(() => 0.5 - Math.random()).slice(0, 3);
-    setOptions([...others, target].sort(() => 0.5 - Math.random()));
+    const options = [...others, target].sort(() => 0.5 - Math.random());
+    setRoundData({ target, options });
   }, [currentIdx]);
 
   const handleSelect = (item: typeof ITEMS[0]) => {
-    if (item.animal === target.animal) {
-      setScore(s => s + 1);
+    if (isProcessing || !roundData) return;
+    setIsProcessing(true);
+
+    const isCorrect = item.animal === roundData.target.animal;
+    const newScore = isCorrect ? score + 1 : score;
+
+    if (isCorrect) {
+      setScore(newScore);
       setFeedback('Correct! Well done! 🌟');
-      setTimeout(() => {
-        setFeedback('');
-        if (currentIdx + 1 < ITEMS.length) {
-          setCurrentIdx(i => i + 1);
-        } else {
-          onComplete({ score: score + 1, total: ITEMS.length });
-        }
-      }, 1500);
     } else {
-      setFeedback('Not that one, try again!');
+      setFeedback(`Not quite! That was a ${item.animal}.`);
     }
+
+    setTimeout(() => {
+      setFeedback('');
+      setIsProcessing(false);
+      if (currentIdx + 1 < ITEMS.length) {
+        setCurrentIdx(i => i + 1);
+      } else {
+        onComplete({ score: Math.round((newScore / ITEMS.length) * 100), total: ITEMS.length });
+      }
+    }, 1500);
   };
 
+  if (!roundData) return null;
+
   return (
-    <div className="flex flex-col h-full text-center max-w-2xl mx-auto">
-      <h2 className="text-3xl font-bold text-purple-600 mb-8">Which animal says "{target.sound}"?</h2>
-      <div className="bg-white p-12 rounded-[3rem] kids-shadow flex flex-col gap-8 flex-1">
-        <div className="text-8xl p-8 bg-purple-50 rounded-full w-48 h-48 flex items-center justify-center mx-auto animate-pulse">
+    <div className="flex flex-col h-full text-center max-w-2xl mx-auto px-4">
+      <div className="mb-4">
+        <h2 className="text-2xl md:text-3xl font-black text-purple-700 mb-2 tracking-tight">Who says "{roundData.target.sound}"?</h2>
+        <div className="w-full bg-purple-100 h-3 rounded-full overflow-hidden">
+          <div
+            className="bg-purple-500 h-full transition-all duration-500"
+            style={{ width: `${(currentIdx / ITEMS.length) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="bg-white p-4 md:p-6 rounded-[2.5rem] kids-shadow border-2 border-purple-50 flex flex-col gap-4 flex-1 justify-center items-center">
+        <div className="text-5xl md:text-6xl p-4 bg-purple-50 rounded-full w-24 h-24 md:w-32 md:h-32 flex items-center justify-center animate-pulse border-2 border-white shadow-inner">
           📢
         </div>
-        {feedback && <p className={`text-2xl font-bold ${feedback.includes('Correct') ? 'text-green-500' : 'text-orange-500'}`}>{feedback}</p>}
-        <div className="grid grid-cols-2 gap-6">
-          {options.map((item, i) => (
+
+        <div className="h-8 flex items-center justify-center">
+          {feedback && (
+            <p className={`text-lg md:text-xl font-black animate-pop-in ${feedback.includes('Correct') ? 'text-green-500' : 'text-orange-500'}`}>
+              {feedback}
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 w-full max-w-md">
+          {roundData.options.map((item, i) => (
             <button
               key={i}
+              disabled={isProcessing}
               onClick={() => handleSelect(item)}
-              className="p-6 bg-orange-50 hover:bg-orange-100 rounded-3xl kids-button-shadow flex flex-col items-center gap-2 border-2 border-orange-100"
+              className="p-4 bg-orange-50 hover:bg-orange-500 hover:text-white rounded-[1.5rem] kids-button-shadow flex flex-col items-center gap-1 border-2 border-white transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
             >
-              <span className="text-6xl">{item.icon}</span>
-              <span className="text-xl font-bold text-orange-600">{item.animal}</span>
+              <span className="text-5xl md:text-6xl">{item.icon}</span>
+              <span className="text-sm font-black uppercase tracking-wide">{item.animal}</span>
             </button>
           ))}
         </div>
       </div>
+      <p className="text-purple-400 font-black text-base italic mt-3">Listening like a pro! 👂✨</p>
     </div>
   );
 };

@@ -1,0 +1,10 @@
+
+> copy1@0.0.0 dev
+> vite
+
+
+  VITE v6.4.1  ready in 839 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://10.226.94.198:3000/
+  ➜  Network: http://172.22.0.1:3000/
