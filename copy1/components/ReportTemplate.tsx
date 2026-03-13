@@ -54,9 +54,11 @@ export const ReportTemplate: React.FC<Props> = ({
       <section className="mb-6">
         <h2 className="text-lg font-bold mb-2">Identifying Information</h2>
         <p className="text-justify">
-          {child.name} is a {child.age} year old child.
-          Physical metrics recorded: Height {child.height}cm, Weight {child.weight}kg, BMI {child.bmi}.
-          Medical conditions noted: {child.conditions || 'None'}.
+          {child.name} is a {child.age} year old {child.sex === 'male' ? 'boy' : child.sex === 'female' ? 'girl' : 'child'}.
+          {child.isPremature ? ` Born premature at ${child.gestationalAgeWeeks || '?'} weeks gestation; corrected age considered in scoring.` : ' Born full-term.'}
+          {child.primaryLanguage ? ` Primary language at home: ${child.primaryLanguage}.` : ''}
+          {child.familyHistoryOfDD ? ' Family history of ASD, ADHD, intellectual disability, or learning disorders reported.' : ''}
+          Medical conditions noted: {child.knownConditions || 'None'}.
         </p>
       </section>
 

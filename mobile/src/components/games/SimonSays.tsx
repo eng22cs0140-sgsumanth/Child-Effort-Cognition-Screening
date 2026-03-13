@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChildProfile } from '../../types';
+import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { ChildProfile, TapEvent } from '../../types';
 import { COLORS } from '../../constants';
 import { calculateBehavioralMetrics } from '../../ceciAlgorithm';
 
@@ -28,22 +28,37 @@ export default function SimonSays({ profile, onComplete }: Props) {
   const reactionTimes = useRef<number[]>([]);
   const commandStartTime = useRef(Date.now());
 
+  // Tap tracking
+  const lastElementTapTimeRef = useRef<number>(0);
+  const lastTapTimeRef = useRef<number>(Date.now());
+  const tapLog = useRef<TapEvent[]>([]);
+  const emptySpaceTapCountRef = useRef(0);
+
   const command = COMMANDS[currentIdx];
 
   const handleDecision = (doAction: boolean) => {
+    const now = Date.now();
+    const reactionTime = now - lastTapTimeRef.current;
+    lastTapTimeRef.current = now;
+    lastElementTapTimeRef.current = now;
+
     const isCorrect = doAction === command.requiresSimon;
     reactionTimes.current.push(Date.now() - commandStartTime.current);
+
     if (isCorrect) {
       correctRef.current++;
+      tapLog.current.push({ timestamp: now, type: 'correct', reactionTime });
       setScore(s => s + 20);
       setFeedback('You listened well! ✅');
     } else {
       incorrectRef.current++;
+      tapLog.current.push({ timestamp: now, type: 'incorrect', reactionTime });
       setFeedback("Simon didn't say! ❌");
     }
 
     setTimeout(() => {
       commandStartTime.current = Date.now();
+      lastTapTimeRef.current = Date.now();
       setFeedback('');
       const nextRounds = rounds + 1;
       setRounds(nextRounds);
@@ -51,13 +66,24 @@ export default function SimonSays({ profile, onComplete }: Props) {
         const finalScore = Math.max(0, score + (isCorrect ? 20 : 0));
         const behavioralMetrics = calculateBehavioralMetrics(
           reactionTimes.current, correctRef.current, incorrectRef.current,
-          (correctRef.current / 5) * 100
+          (correctRef.current / 5) * 100,
+          { tapEventLog: tapLog.current, emptySpaceTapCount: emptySpaceTapCountRef.current }
         );
         onComplete({ score: finalScore, rounds: 5, behavioralMetrics });
       } else {
         setCurrentIdx(Math.floor(Math.random() * COMMANDS.length));
       }
     }, 1500);
+  };
+
+  const handleEmptySpaceTap = () => {
+    const now = Date.now();
+    if (now - lastElementTapTimeRef.current > 20) {
+      const reactionTime = now - lastTapTimeRef.current;
+      lastTapTimeRef.current = now;
+      tapLog.current.push({ timestamp: now, type: 'empty_space', reactionTime });
+      emptySpaceTapCountRef.current++;
+    }
   };
 
   return (
@@ -74,22 +100,24 @@ export default function SimonSays({ profile, onComplete }: Props) {
         ) : null}
       </View>
 
-      <View style={styles.buttonsRow}>
-        <TouchableOpacity
-          style={[styles.doBtn, { backgroundColor: '#22C55E' }]}
-          onPress={() => handleDecision(true)}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.doBtnText}>Do It! 👍</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.doBtn, { backgroundColor: '#EF4444' }]}
-          onPress={() => handleDecision(false)}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.doBtnText}>Don't Do It! 🛑</Text>
-        </TouchableOpacity>
-      </View>
+      <Pressable style={styles.buttonsWrapper} onPress={handleEmptySpaceTap}>
+        <View style={styles.buttonsRow}>
+          <TouchableOpacity
+            style={[styles.doBtn, { backgroundColor: '#22C55E' }]}
+            onPress={() => handleDecision(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.doBtnText}>Do It! 👍</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.doBtn, { backgroundColor: '#EF4444' }]}
+            onPress={() => handleDecision(false)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.doBtnText}>Don't Do It! 🛑</Text>
+          </TouchableOpacity>
+        </View>
+      </Pressable>
 
       <Text style={styles.hint}>
         Listen carefully! Only do it if Starry says "Simon says"!
@@ -137,11 +165,17 @@ const styles = StyleSheet.create({
   },
   feedbackGood: { color: '#16A34A' },
   feedbackBad: { color: '#EF4444' },
+  buttonsWrapper: {
+    width: '100%',
+    padding: 8,
+    backgroundColor: COLORS.gray50,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
   buttonsRow: {
     flexDirection: 'row',
     gap: 12,
     width: '100%',
-    marginBottom: 16,
   },
   doBtn: {
     flex: 1,

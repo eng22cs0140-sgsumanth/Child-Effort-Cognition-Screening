@@ -4,10 +4,11 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import { ChildProfile } from '../../types';
+import { ChildProfile, TapEvent } from '../../types';
 import { calculateBehavioralMetrics } from '../../ceciAlgorithm';
 import { COLORS } from '../../constants';
 
@@ -31,6 +32,12 @@ export default function ReactionCatcher({ profile, onComplete }: Props) {
   const missedItems = useRef(0);
   const clickCount = useRef(0);
   const gameStartTime = useRef(Date.now());
+
+  // Tap tracking
+  const lastElementTapTimeRef = useRef<number>(0);
+  const lastTapTimeRef = useRef<number>(Date.now());
+  const tapLog = useRef<TapEvent[]>([]);
+  const emptySpaceTapCountRef = useRef(0);
 
   const spawnRate = Math.max(800, 2000 - (profile.age * 150));
   const fallSpeed = Math.min(6, 3 + (profile.age / 2));
@@ -74,7 +81,8 @@ export default function ReactionCatcher({ profile, onComplete }: Props) {
         reactionTimes.current,
         correctCatches.current,
         missedItems.current,
-        engagementScore
+        engagementScore,
+        { tapEventLog: tapLog.current, emptySpaceTapCount: emptySpaceTapCountRef.current }
       );
       onComplete({ score, age: profile.age, behavioralMetrics });
     }
@@ -94,12 +102,26 @@ export default function ReactionCatcher({ profile, onComplete }: Props) {
   }, [fallSpeed]);
 
   const handleCatch = (id: number, startTime: number) => {
-    const reactionTime = Date.now() - startTime;
+    const now = Date.now();
+    const reactionTime = now - startTime;
+    lastElementTapTimeRef.current = now;
+    lastTapTimeRef.current = now;
     reactionTimes.current.push(reactionTime);
+    tapLog.current.push({ timestamp: now, type: 'correct', reactionTime });
     correctCatches.current++;
     clickCount.current++;
     setScore(s => s + 10);
     setItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  const handleEmptySpaceTap = () => {
+    const now = Date.now();
+    if (now - lastElementTapTimeRef.current > 20) {
+      const reactionTime = now - lastTapTimeRef.current;
+      lastTapTimeRef.current = now;
+      tapLog.current.push({ timestamp: now, type: 'empty_space', reactionTime });
+      emptySpaceTapCountRef.current++;
+    }
   };
 
   return (
@@ -109,7 +131,7 @@ export default function ReactionCatcher({ profile, onComplete }: Props) {
         <Text style={styles.timeText}>Time: {timeLeft}s</Text>
       </View>
 
-      <View style={styles.gameArea}>
+      <Pressable style={styles.gameArea} onPress={handleEmptySpaceTap}>
         {timeLeft > 25 && (
           <View style={styles.instructions}>
             <Text style={styles.instructionTitle}>Tap the falling toys!</Text>
@@ -126,7 +148,7 @@ export default function ReactionCatcher({ profile, onComplete }: Props) {
             <Text style={styles.itemChar}>{item.char}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </Pressable>
     </View>
   );
 }

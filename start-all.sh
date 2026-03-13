@@ -60,7 +60,7 @@ done
 echo ""
 
 # ── Step 2: React Web App ──────────────────────────────────────────────────────
-echo "${BLUE}Step 2: Starting React Web App (port 5173)...${NC}"
+echo "${BLUE}Step 2: Starting React Web App (port 3002)...${NC}"
 
 # Install npm dependencies if needed
 if [ ! -d "copy1/node_modules" ]; then
@@ -84,7 +84,7 @@ echo ""
 echo "Services:"
 echo "  ML Pipeline API : http://localhost:8000"
 echo "  API Docs        : http://localhost:8000/docs"
-echo "  React Web App   : http://localhost:5173"
+echo "  React Web App   : http://localhost:3002"
 echo ""
 echo "Logs:"
 echo "  ML Pipeline : tail -f ml_pipeline.log"

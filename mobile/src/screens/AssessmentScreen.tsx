@@ -19,7 +19,7 @@ import { GameType, GameResult } from '../types';
 import ReactionCatcher from '../components/games/ReactionCatcher';
 import PatternMemory from '../components/games/PatternMemory';
 import EmotionDetective from '../components/games/EmotionDetective';
-import ShapeSorter from '../components/games/ShapeSorter';
+import NumberSequencer from '../components/games/NumberSequencer';
 import CountingGarden from '../components/games/CountingGarden';
 import SoundWordGame from '../components/games/SoundWordGame';
 import FollowLeader from '../components/games/FollowLeader';
@@ -63,7 +63,7 @@ export default function AssessmentScreen() {
       case 'catcher': return <ReactionCatcher {...props} />;
       case 'memory': return <PatternMemory {...props} />;
       case 'emotion': return <EmotionDetective {...props} />;
-      case 'shapes': return <ShapeSorter {...props} />;
+      case 'numbersequencer': return <NumberSequencer {...props} />;
       case 'counting': return <CountingGarden {...props} />;
       case 'sound': return <SoundWordGame {...props} />;
       case 'leader': return <FollowLeader {...props} />;

@@ -29,7 +29,7 @@ export default function ResultsScreen() {
 
   const getCategoryScores = () => {
     const categories = {
-      cognitive: { games: ['memory', 'shapes', 'counting', 'maze'], total: 0, count: 0 },
+      cognitive: { games: ['memory', 'numbersequencer', 'counting', 'maze'], total: 0, count: 0 },
       social: { games: ['emotion', 'leader'], total: 0, count: 0 },
       language: { games: ['sound'], total: 0, count: 0 },
       attention: { games: ['simon', 'category', 'catcher'], total: 0, count: 0 },
@@ -85,6 +85,32 @@ export default function ResultsScreen() {
       : ceciScore.riskBand === 'amber'
       ? '⚠ Monitor Closely'
       : '⚡ Specialist Recommended';
+
+  const classificationLabel = ceciScore.primaryClassification
+    ? {
+        typical: '✓ Typical',
+        emotional_variability: '💛 Emotional Variability',
+        effort_variability: '⚡ Effort Variability',
+        cognitive_risk: '🔴 Cognitive Risk',
+      }[ceciScore.primaryClassification]
+    : null;
+
+  const classificationColor = ceciScore.primaryClassification
+    ? {
+        typical: '#22C55E',
+        emotional_variability: '#F59E0B',
+        effort_variability: '#EAB308',
+        cognitive_risk: '#EF4444',
+      }[ceciScore.primaryClassification]
+    : COLORS.primary;
+
+  const tapMetrics = results
+    .filter(r => r.behavioralMetrics)
+    .map(r => r.behavioralMetrics!);
+  const totalTaps = tapMetrics.reduce((s, m) => s + (m.totalTapCount ?? 0), 0);
+  const totalEmptyTaps = tapMetrics.reduce((s, m) => s + (m.emptySpaceTapCount ?? 0), 0);
+  const totalImpulsiveTaps = tapMetrics.reduce((s, m) => s + (m.impulsiveTapCount ?? 0), 0);
+  const emptySpacePct = totalTaps > 0 ? Math.round((totalEmptyTaps / totalTaps) * 100) : 0;
 
   // Radar chart SVG
   const svgSize = 260;
@@ -228,6 +254,68 @@ export default function ResultsScreen() {
                   </View>
                 </View>
               </>
+            )}
+
+            {/* 3-Way Classification Indicator */}
+            <View style={styles.triIndicatorSection}>
+              <Text style={styles.modelsTitle}>Classification Indicators</Text>
+              {[
+                {
+                  label: 'Cognitive Risk Score',
+                  value: ceciScore.pid !== undefined ? Math.round(ceciScore.pid * 100) : 0,
+                  color: '#EF4444',
+                },
+                {
+                  label: 'Emotional Variability',
+                  value: ceciScore.emotionalVariabilityScore ?? 0,
+                  color: '#F59E0B',
+                },
+                {
+                  label: 'Effort Variability',
+                  value: ceciScore.effortVariabilityScore ?? 0,
+                  color: '#EAB308',
+                },
+              ].map(m => (
+                <View key={m.label} style={styles.modelBar}>
+                  <View style={styles.modelBarHeader}>
+                    <Text style={styles.modelBarLabel}>{m.label}</Text>
+                    <Text style={[styles.modelBarValue, { color: m.color }]}>{m.value}%</Text>
+                  </View>
+                  <View style={styles.modelBarBg}>
+                    <View style={[styles.modelBarFill, { width: `${m.value}%` as any, backgroundColor: m.color }]} />
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {/* Primary Classification Badge */}
+            {classificationLabel && (
+              <View style={[styles.classificationBadge, { backgroundColor: classificationColor + '22', borderColor: classificationColor }]}>
+                <Text style={[styles.classificationText, { color: classificationColor }]}>
+                  {classificationLabel}
+                </Text>
+              </View>
+            )}
+
+            {/* Tap Behavior Summary */}
+            {totalTaps > 0 && (
+              <View style={styles.tapSummary}>
+                <Text style={styles.tapSummaryTitle}>Tap Behavior</Text>
+                <View style={styles.tapSummaryRow}>
+                  <View style={styles.tapStat}>
+                    <Text style={styles.tapStatNum}>{totalTaps}</Text>
+                    <Text style={styles.tapStatLabel}>Total Taps</Text>
+                  </View>
+                  <View style={styles.tapStat}>
+                    <Text style={[styles.tapStatNum, { color: '#F59E0B' }]}>{emptySpacePct}%</Text>
+                    <Text style={styles.tapStatLabel}>Empty Space</Text>
+                  </View>
+                  <View style={styles.tapStat}>
+                    <Text style={[styles.tapStatNum, { color: '#EF4444' }]}>{totalImpulsiveTaps}</Text>
+                    <Text style={styles.tapStatLabel}>Impulsive</Text>
+                  </View>
+                </View>
+              </View>
             )}
 
             <View style={styles.sourceRow}>
@@ -533,6 +621,32 @@ const styles = StyleSheet.create({
   sourceBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   sourceBadgeText: { fontSize: 11, fontWeight: '800' },
   sessionsText: { fontSize: 11, color: COLORS.gray400, fontWeight: '600' },
+  triIndicatorSection: {
+    backgroundColor: COLORS.gray50,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  classificationBadge: {
+    borderRadius: 16,
+    borderWidth: 2,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  classificationText: { fontSize: 16, fontWeight: '900' },
+  tapSummary: {
+    backgroundColor: COLORS.gray50,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+  },
+  tapSummaryTitle: { fontSize: 13, fontWeight: '900', color: COLORS.gray600, marginBottom: 8 },
+  tapSummaryRow: { flexDirection: 'row', justifyContent: 'space-around' },
+  tapStat: { alignItems: 'center' },
+  tapStatNum: { fontSize: 20, fontWeight: '900', color: COLORS.primary },
+  tapStatLabel: { fontSize: 10, fontWeight: '700', color: COLORS.gray400, marginTop: 2 },
   radarCard: {
     backgroundColor: COLORS.white,
     borderRadius: 36,

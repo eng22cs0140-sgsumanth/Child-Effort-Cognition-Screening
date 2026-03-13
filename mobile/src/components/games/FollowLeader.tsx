@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChildProfile } from '../../types';
+import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { ChildProfile, TapEvent } from '../../types';
 import { COLORS } from '../../constants';
 import { calculateBehavioralMetrics } from '../../ceciAlgorithm';
 
@@ -29,6 +29,12 @@ export default function FollowLeader({ profile, onComplete }: Props) {
   const reactionTimes = useRef<number[]>([]);
   const turnStartTime = useRef(0);
 
+  // Tap tracking
+  const lastElementTapTimeRef = useRef<number>(0);
+  const lastTapTimeRef = useRef<number>(Date.now());
+  const tapLog = useRef<TapEvent[]>([]);
+  const emptySpaceTapCountRef = useRef(0);
+
   const maxRounds = 4;
 
   const startRound = () => {
@@ -48,6 +54,7 @@ export default function FollowLeader({ profile, onComplete }: Props) {
         setIsShowing(false);
         setActiveAction(null);
         setMessage('Your turn! Copy the moves!');
+        lastTapTimeRef.current = Date.now();
         return;
       }
       setActiveAction(nextSeq[i]);
@@ -63,15 +70,24 @@ export default function FollowLeader({ profile, onComplete }: Props) {
 
   const handleAction = (idx: number) => {
     if (isShowing) return;
+
+    const now = Date.now();
+    const reactionTime = now - lastTapTimeRef.current;
+    lastTapTimeRef.current = now;
+    lastElementTapTimeRef.current = now;
+
     const nextUserSeq = [...userSequence, idx];
     setUserSequence(nextUserSeq);
 
     if (idx !== sequence[userSequence.length]) {
       incorrectAttempts.current++;
+      tapLog.current.push({ timestamp: now, type: 'incorrect', reactionTime });
       setMessage("Oh no! Let's try the round again!");
       setTimeout(startRound, 1500);
       return;
     }
+
+    tapLog.current.push({ timestamp: now, type: 'correct', reactionTime });
 
     if (userSequence.length === 0) {
       reactionTimes.current.push(Math.max(0, Date.now() - turnStartTime.current));
@@ -82,13 +98,24 @@ export default function FollowLeader({ profile, onComplete }: Props) {
       if (round >= maxRounds) {
         const behavioralMetrics = calculateBehavioralMetrics(
           reactionTimes.current, correctRounds.current, incorrectAttempts.current,
-          (round / maxRounds) * 100
+          (round / maxRounds) * 100,
+          { tapEventLog: tapLog.current, emptySpaceTapCount: emptySpaceTapCountRef.current }
         );
         onComplete({ score: round * 100, rounds: round, behavioralMetrics });
       } else {
         setMessage('Great dancing! 🕺');
         setTimeout(() => setRound(r => r + 1), 1000);
       }
+    }
+  };
+
+  const handleEmptySpaceTap = () => {
+    const now = Date.now();
+    if (now - lastElementTapTimeRef.current > 20) {
+      const reactionTime = now - lastTapTimeRef.current;
+      lastTapTimeRef.current = now;
+      tapLog.current.push({ timestamp: now, type: 'empty_space', reactionTime });
+      emptySpaceTapCountRef.current++;
     }
   };
 
@@ -108,24 +135,26 @@ export default function FollowLeader({ profile, onComplete }: Props) {
         <Text style={styles.message}>{message}</Text>
       </View>
 
-      <View style={styles.actionsGrid}>
-        {ACTIONS.map((action, i) => (
-          <TouchableOpacity
-            key={i}
-            disabled={isShowing}
-            onPress={() => handleAction(i)}
-            style={[
-              styles.actionBtn,
-              { backgroundColor: action.bg, borderColor: action.border },
-              isShowing && styles.actionBtnDisabled,
-            ]}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.actionIcon}>{action.icon}</Text>
-            <Text style={styles.actionName}>{action.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Pressable style={styles.actionsWrapper} onPress={handleEmptySpaceTap}>
+        <View style={styles.actionsGrid}>
+          {ACTIONS.map((action, i) => (
+            <TouchableOpacity
+              key={i}
+              disabled={isShowing}
+              onPress={() => handleAction(i)}
+              style={[
+                styles.actionBtn,
+                { backgroundColor: action.bg, borderColor: action.border },
+                isShowing && styles.actionBtnDisabled,
+              ]}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.actionIcon}>{action.icon}</Text>
+              <Text style={styles.actionName}>{action.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Pressable>
     </View>
   );
 }
@@ -164,6 +193,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.primary,
     textAlign: 'center',
+  },
+  actionsWrapper: {
+    padding: 8,
+    backgroundColor: COLORS.gray50,
+    borderRadius: 20,
+    flex: 1,
+    justifyContent: 'center',
   },
   actionsGrid: {
     flexDirection: 'row',

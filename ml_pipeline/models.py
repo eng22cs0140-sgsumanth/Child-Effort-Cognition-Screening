@@ -15,6 +15,16 @@ class BehavioralMetrics(BaseModel):
     incorrectAttempts: int
     averageReactionTime: float
     reactionTimeVariability: float
+    # Tap tracking (new — defaults preserve backward compatibility)
+    totalTapCount: int = 0
+    emptySpaceTapCount: int = 0
+    consecutiveEmptySpaceTaps: int = 0
+    impulsiveTapCount: int = 0
+    # Within-session emotional variability
+    withinSessionDegradation: float = 0.0
+    frustrationBurstCount: int = 0
+    engagementDropRate: float = 0.0
+    reactionTimeSpikeCount: int = 0
 
 
 class GameResult(BaseModel):
@@ -44,6 +54,12 @@ class CECIScore(BaseModel):
     temporalScore: int = Field(ge=0, le=100)
     bayesianCalibration: int = Field(ge=0, le=100)
     recommendation: str
+    # 3-way classification (optional for backward compat)
+    primaryClassification: Optional[Literal[
+        'typical', 'emotional_variability', 'effort_variability', 'cognitive_risk'
+    ]] = None
+    emotionalVariabilityScore: Optional[int] = None   # 0-100
+    effortVariabilityScore: Optional[int] = None      # 0-100
 
 
 class PredictionRequest(BaseModel):

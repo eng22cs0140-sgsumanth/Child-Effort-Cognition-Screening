@@ -8,7 +8,7 @@ export const GAMES: GameMetadata[] = [
     icon: '🎯',
     description: 'Catch falling stars, butterflies, and more!',
     badge: 'Attention',
-    ageRange: [0, 9]
+    ageRange: [3, 9]
   },
   {
     id: 'memory',
@@ -16,15 +16,15 @@ export const GAMES: GameMetadata[] = [
     icon: '🧩',
     description: 'Remember and repeat the pattern!',
     badge: 'Cognitive',
-    ageRange: [2, 9]
+    ageRange: [3, 9]
   },
   {
-    id: 'shapes',
-    title: 'Shape Sorter Challenge',
-    icon: '🎨',
-    description: 'Tap and match each shape to its spot!',
+    id: 'numbersequencer',
+    title: 'Number Sequencer',
+    icon: '🔢',
+    description: 'Tap numbers in the right order!',
     badge: 'Cognitive',
-    ageRange: [0, 6]
+    ageRange: [3, 9]
   },
   {
     id: 'sound',
@@ -32,7 +32,7 @@ export const GAMES: GameMetadata[] = [
     icon: '🐾',
     description: 'Match animal sounds to the right animal!',
     badge: 'Language',
-    ageRange: [1, 9]
+    ageRange: [3, 9]
   },
   {
     id: 'leader',
@@ -40,15 +40,15 @@ export const GAMES: GameMetadata[] = [
     icon: '🏃',
     description: 'Imitate the movements!',
     badge: 'Social',
-    ageRange: [0, 9]
+    ageRange: [3, 9]
   },
   {
     id: 'counting',
     title: 'Counting Garden',
-    icon: '🔢',
+    icon: '🌸',
     description: 'Count items in the garden!',
     badge: 'Cognitive',
-    ageRange: [1, 7]
+    ageRange: [3, 9]
   },
   {
     id: 'emotion',
@@ -56,7 +56,7 @@ export const GAMES: GameMetadata[] = [
     icon: '😊',
     description: 'Identify the feelings!',
     badge: 'Social',
-    ageRange: [2, 9]
+    ageRange: [3, 9]
   },
   {
     id: 'simon',
@@ -64,7 +64,7 @@ export const GAMES: GameMetadata[] = [
     icon: '🎮',
     description: 'Do it only if Simon says so!',
     badge: 'Attention',
-    ageRange: [2, 9]
+    ageRange: [3, 9]
   },
   {
     id: 'maze',
@@ -72,7 +72,7 @@ export const GAMES: GameMetadata[] = [
     icon: '🗺️',
     description: 'Click your way from home to the treasure!',
     badge: 'Cognitive',
-    ageRange: [1, 7]
+    ageRange: [3, 9]
   },
   {
     id: 'category',

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChildProfile } from '../../types';
+import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { ChildProfile, TapEvent } from '../../types';
 import { COLORS } from '../../constants';
 import { calculateBehavioralMetrics } from '../../ceciAlgorithm';
 
@@ -30,6 +30,12 @@ export default function PatternMemory({ profile, onComplete }: Props) {
   const reactionTimes = useRef<number[]>([]);
   const turnStartTime = useRef(0);
 
+  // Tap tracking
+  const lastElementTapTimeRef = useRef<number>(0);
+  const lastTapTimeRef = useRef<number>(Date.now());
+  const tapLog = useRef<TapEvent[]>([]);
+  const emptySpaceTapCountRef = useRef(0);
+
   const maxLevel = 5;
   const sequenceLength = Math.min(level + 1 + Math.floor(profile.age / 4), 8);
 
@@ -49,6 +55,7 @@ export default function PatternMemory({ profile, onComplete }: Props) {
         setIsShowing(false);
         setActiveIdx(null);
         setMessage('Now you repeat!');
+        lastTapTimeRef.current = Date.now();
         return;
       }
       setActiveIdx(newSequence[i]);
@@ -65,15 +72,23 @@ export default function PatternMemory({ profile, onComplete }: Props) {
   const handleItemClick = (idx: number) => {
     if (isShowing) return;
 
+    const now = Date.now();
+    const reactionTime = now - lastTapTimeRef.current;
+    lastTapTimeRef.current = now;
+    lastElementTapTimeRef.current = now;
+
     const nextSequence = [...userSequence, idx];
     setUserSequence(nextSequence);
 
     if (idx !== sequence[userSequence.length]) {
       incorrectAttempts.current++;
+      tapLog.current.push({ timestamp: now, type: 'incorrect', reactionTime });
       setMessage("Oops! Let's try that again.");
       setTimeout(startLevel, 1500);
       return;
     }
+
+    tapLog.current.push({ timestamp: now, type: 'correct', reactionTime });
 
     if (userSequence.length === 0) {
       reactionTimes.current.push(Math.max(0, Date.now() - turnStartTime.current));
@@ -84,13 +99,24 @@ export default function PatternMemory({ profile, onComplete }: Props) {
       if (level >= maxLevel) {
         const behavioralMetrics = calculateBehavioralMetrics(
           reactionTimes.current, correctSeqs.current, incorrectAttempts.current,
-          (level / maxLevel) * 100
+          (level / maxLevel) * 100,
+          { tapEventLog: tapLog.current, emptySpaceTapCount: emptySpaceTapCountRef.current }
         );
         onComplete({ level, score: level * 100, behavioralMetrics });
       } else {
         setMessage('Great job!');
         setTimeout(() => setLevel(l => l + 1), 1000);
       }
+    }
+  };
+
+  const handleEmptySpaceTap = () => {
+    const now = Date.now();
+    if (now - lastElementTapTimeRef.current > 20) {
+      const reactionTime = now - lastTapTimeRef.current;
+      lastTapTimeRef.current = now;
+      tapLog.current.push({ timestamp: now, type: 'empty_space', reactionTime });
+      emptySpaceTapCountRef.current++;
     }
   };
 
@@ -109,24 +135,26 @@ export default function PatternMemory({ profile, onComplete }: Props) {
         ))}
       </View>
 
-      <View style={styles.grid}>
-        {ITEMS.map((item, idx) => (
-          <TouchableOpacity
-            key={idx}
-            onPress={() => handleItemClick(idx)}
-            disabled={isShowing}
-            style={[
-              styles.btn,
-              { backgroundColor: item.color },
-              activeIdx === idx && styles.btnActive,
-              isShowing && styles.btnDisabled,
-            ]}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.btnChar}>{item.char}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Pressable style={styles.gridWrapper} onPress={handleEmptySpaceTap}>
+        <View style={styles.grid}>
+          {ITEMS.map((item, idx) => (
+            <TouchableOpacity
+              key={idx}
+              onPress={() => handleItemClick(idx)}
+              disabled={isShowing}
+              style={[
+                styles.btn,
+                { backgroundColor: item.color },
+                activeIdx === idx && styles.btnActive,
+                isShowing && styles.btnDisabled,
+              ]}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.btnChar}>{item.char}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Pressable>
     </View>
   );
 }
@@ -168,12 +196,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   seqItemChar: { fontSize: 24 },
+  gridWrapper: {
+    flex: 1,
+    backgroundColor: COLORS.gray50,
+    borderRadius: 20,
+    padding: 8,
+    justifyContent: 'center',
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
     justifyContent: 'center',
-    flex: 1,
     alignContent: 'center',
   },
   btn: {

@@ -39,8 +39,8 @@ echo "Checking for remaining processes..."
 # Kill any process on port 8000
 lsof -ti:8000 | xargs kill -9 2>/dev/null && echo "${GREEN}✓ Killed process on port 8000${NC}"
 
-# Kill any process on port 5173
-lsof -ti:5173 | xargs kill -9 2>/dev/null && echo "${GREEN}✓ Killed process on port 5173${NC}"
+# Kill any process on port 3002
+lsof -ti:3002 | xargs kill -9 2>/dev/null && echo "${GREEN}✓ Killed process on port 3002${NC}"
 
 echo ""
 echo "${GREEN}All services stopped!${NC}"

@@ -3,7 +3,7 @@ Post-Processing Stage
 Determines risk bands and generates recommendations.
 Leverages trained model outputs when available.
 """
-from typing import Dict, Any, Literal
+from typing import Dict, Any, Literal, Optional
 from .base import PipelineStage
 from ..config import PipelineConfig
 
@@ -38,14 +38,20 @@ class PostProcessingStage(PipelineStage):
         # Compute temporal score
         temporal_score = 100.0 - temporal_output['persistentDifficulty']
 
-        # Fusion into CECI overall score
-        ceci_overall = (
-            tree_output * 0.3 +
-            temporal_score * 0.3 +
-            bayesian_output['calibratedScore'] * 0.4
-        )
+        # EVI penalty for updated CECI formula
+        evi = temporal_output.get('emotionalVariability', 0.0)  # 0-100
+        evi_penalty = (evi / 100.0) * 0.15
 
-        # Determine risk band - use trained model classification if available
+        # Updated CECI fusion with EVI penalty
+        ceci_overall = (
+            tree_output * 0.40 +
+            temporal_score * 0.30 +
+            bayesian_output['calibratedScore'] * 0.30 -
+            evi_penalty * 100
+        )
+        ceci_overall = max(0.0, min(100.0, ceci_overall))
+
+        # Determine risk band
         risk_band = self._determine_risk_band(
             ceci_overall,
             bayesian_output['confidence'],
@@ -54,12 +60,18 @@ class PostProcessingStage(PipelineStage):
             context
         )
 
-        # Generate recommendation
-        recommendation = self._generate_recommendation(
-            risk_band,
-            temporal_output,
-            child_name
+        # Determine primary classification
+        effort_inconsistency = temporal_output.get('effortInconsistency', 0.0)
+        persistent_difficulty = temporal_output.get('persistentDifficulty', 0.0)
+        primary_classification = self._determine_classification(
+            risk_band, evi, effort_inconsistency, persistent_difficulty
         )
+
+        # Generate recommendation based on classification
+        recommendation = self._generate_recommendation_for_classification(primary_classification, child_name)
+
+        effort_variability_score = round(effort_inconsistency)
+        emotional_variability_score = round(evi)
 
         final_score = {
             'overall': round(ceci_overall),
@@ -68,7 +80,10 @@ class PostProcessingStage(PipelineStage):
             'treeBasedScore': round(tree_output),
             'temporalScore': round(temporal_score),
             'bayesianCalibration': round(bayesian_output['calibratedScore']),
-            'recommendation': recommendation
+            'recommendation': recommendation,
+            'primaryClassification': primary_classification,
+            'emotionalVariabilityScore': emotional_variability_score,
+            'effortVariabilityScore': effort_variability_score,
         }
 
         # Add trained model metadata if available
@@ -119,6 +134,44 @@ class PostProcessingStage(PipelineStage):
             return 'amber'
         else:
             return 'red'
+
+    def _determine_classification(
+        self,
+        risk_band: str,
+        evi: float,          # 0-100
+        effort_inconsistency: float,  # 0-100
+        persistent_difficulty: float  # 0-100
+    ) -> str:
+        """Determine primary 3-way classification."""
+        if risk_band == 'green':
+            return 'typical'
+        if risk_band == 'amber':
+            if evi > 40 and effort_inconsistency < 40:
+                return 'emotional_variability'
+            if effort_inconsistency > 40 and evi < 40:
+                return 'effort_variability'
+            return 'effort_variability' if effort_inconsistency >= evi else 'emotional_variability'
+        # red band
+        if persistent_difficulty > 60 and evi < 35:
+            return 'cognitive_risk'
+        if evi > 50:
+            return 'emotional_variability'
+        return 'cognitive_risk'
+
+    def _generate_recommendation_for_classification(
+        self,
+        classification: str,
+        child_name: str
+    ) -> str:
+        """Generate recommendation based on primary classification."""
+        if classification == 'typical':
+            return "Developing typically. Continue monitoring across sessions."
+        elif classification == 'emotional_variability':
+            return "Performance appears influenced by emotional state. Monitor conditions and retry in a calm environment before further assessment."
+        elif classification == 'effort_variability':
+            return "Inconsistent engagement observed across sessions. Reassess under structured conditions."
+        else:
+            return "Persistent low performance observed across sessions. Specialist evaluation recommended."
 
     def _generate_recommendation(
         self,

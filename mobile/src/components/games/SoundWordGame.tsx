@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChildProfile } from '../../types';
+import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { ChildProfile, TapEvent } from '../../types';
 import { COLORS } from '../../constants';
 import { calculateBehavioralMetrics } from '../../ceciAlgorithm';
 
@@ -28,10 +28,17 @@ export default function SoundWordGame({ profile, onComplete }: Props) {
   const reactionTimes = useRef<number[]>([]);
   const questionStartRef = useRef(Date.now());
 
+  // Tap tracking
+  const lastElementTapTimeRef = useRef<number>(0);
+  const lastTapTimeRef = useRef<number>(Date.now());
+  const tapLog = useRef<TapEvent[]>([]);
+  const emptySpaceTapCountRef = useRef(0);
+
   const target = ITEMS[currentIdx];
 
   useEffect(() => {
     questionStartRef.current = Date.now();
+    lastTapTimeRef.current = Date.now();
     const others = ITEMS.filter((_, i) => i !== currentIdx)
       .sort(() => 0.5 - Math.random())
       .slice(0, 3);
@@ -39,8 +46,14 @@ export default function SoundWordGame({ profile, onComplete }: Props) {
   }, [currentIdx]);
 
   const handleSelect = (item: typeof ITEMS[0]) => {
+    const now = Date.now();
+    const reactionTime = now - lastTapTimeRef.current;
+    lastTapTimeRef.current = now;
+    lastElementTapTimeRef.current = now;
+
     if (item.animal === target.animal) {
       reactionTimes.current.push(Date.now() - questionStartRef.current);
+      tapLog.current.push({ timestamp: now, type: 'correct', reactionTime });
       setScore(s => s + 1);
       setFeedback('Correct! Well done! 🌟');
       setTimeout(() => {
@@ -51,14 +64,26 @@ export default function SoundWordGame({ profile, onComplete }: Props) {
           const finalScore = score + 1;
           const behavioralMetrics = calculateBehavioralMetrics(
             reactionTimes.current, finalScore, incorrectRef.current,
-            (finalScore / ITEMS.length) * 100
+            (finalScore / ITEMS.length) * 100,
+            { tapEventLog: tapLog.current, emptySpaceTapCount: emptySpaceTapCountRef.current }
           );
           onComplete({ score: finalScore, total: ITEMS.length, behavioralMetrics });
         }
       }, 1500);
     } else {
       incorrectRef.current++;
+      tapLog.current.push({ timestamp: now, type: 'incorrect', reactionTime });
       setFeedback('Not that one, try again!');
+    }
+  };
+
+  const handleEmptySpaceTap = () => {
+    const now = Date.now();
+    if (now - lastElementTapTimeRef.current > 20) {
+      const reactionTime = now - lastTapTimeRef.current;
+      lastTapTimeRef.current = now;
+      tapLog.current.push({ timestamp: now, type: 'empty_space', reactionTime });
+      emptySpaceTapCountRef.current++;
     }
   };
 
@@ -77,19 +102,21 @@ export default function SoundWordGame({ profile, onComplete }: Props) {
         </Text>
       ) : <View style={styles.fbPlaceholder} />}
 
-      <View style={styles.optionsGrid}>
-        {options.map((item, i) => (
-          <TouchableOpacity
-            key={i}
-            style={styles.optionBtn}
-            onPress={() => handleSelect(item)}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.optionIcon}>{item.icon}</Text>
-            <Text style={styles.optionLabel}>{item.animal}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Pressable style={styles.optionsWrapper} onPress={handleEmptySpaceTap}>
+        <View style={styles.optionsGrid}>
+          {options.map((item, i) => (
+            <TouchableOpacity
+              key={i}
+              style={styles.optionBtn}
+              onPress={() => handleSelect(item)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.optionIcon}>{item.icon}</Text>
+              <Text style={styles.optionLabel}>{item.animal}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Pressable>
     </View>
   );
 }
@@ -129,6 +156,12 @@ const styles = StyleSheet.create({
   fbPlaceholder: { height: 26, marginBottom: 12 },
   feedbackGood: { color: '#16A34A' },
   feedbackBad: { color: COLORS.orange },
+  optionsWrapper: {
+    width: '100%',
+    padding: 8,
+    backgroundColor: COLORS.gray50,
+    borderRadius: 20,
+  },
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

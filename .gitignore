@@ -1,0 +1,48 @@
+# ── Runtime artifacts ─────────────────────────────────────────────────────────
+*.log
+*.pid
+logs/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+ml_pipeline/venv/
+ml_pipeline/.pytest_cache/
+ml_pipeline/tests/__pycache__/
+ml_pipeline/stages/__pycache__/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Node / React ──────────────────────────────────────────────────────────────
+node_modules/
+copy1/dist/
+copy1/dist-ssr/
+mobile/node_modules/
+
+# ── Environment files (keep only .env.example) ────────────────────────────────
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+copy1/.env
+copy1/.env.local
+copy1/.env.development
+copy1/.env.production
+
+# ── Editor & OS ───────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.sw?
+
+# ── Claude Code local settings ────────────────────────────────────────────────
+.claude/
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+variables.docx

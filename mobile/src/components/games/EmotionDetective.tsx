@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChildProfile } from '../../types';
+import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { ChildProfile, TapEvent } from '../../types';
 import { COLORS } from '../../constants';
 import { calculateBehavioralMetrics } from '../../ceciAlgorithm';
 
@@ -28,6 +28,12 @@ export default function EmotionDetective({ profile, onComplete }: Props) {
   const reactionTimes = useRef<number[]>([]);
   const questionStartRef = useRef(Date.now());
 
+  // Tap tracking
+  const lastElementTapTimeRef = useRef<number>(0);
+  const lastTapTimeRef = useRef<number>(Date.now());
+  const tapLog = useRef<TapEvent[]>([]);
+  const emptySpaceTapCountRef = useRef(0);
+
   const targetEmotion = EMOTIONS[currentIdx];
 
   const generateOptions = () => {
@@ -39,11 +45,18 @@ export default function EmotionDetective({ profile, onComplete }: Props) {
   useEffect(() => {
     setOptions(generateOptions());
     questionStartRef.current = Date.now();
+    lastTapTimeRef.current = Date.now();
   }, [currentIdx]);
 
   const handleSelect = (emotion: typeof EMOTIONS[0]) => {
+    const now = Date.now();
+    const reactionTime = now - lastTapTimeRef.current;
+    lastTapTimeRef.current = now;
+    lastElementTapTimeRef.current = now;
+
     if (emotion.name === targetEmotion.name) {
       reactionTimes.current.push(Date.now() - questionStartRef.current);
+      tapLog.current.push({ timestamp: now, type: 'correct', reactionTime });
       setScore(s => s + 1);
       setFeedback('You nailed it! 🕵️✨');
       setTimeout(() => {
@@ -54,14 +67,26 @@ export default function EmotionDetective({ profile, onComplete }: Props) {
           const finalScore = score + 1;
           const behavioralMetrics = calculateBehavioralMetrics(
             reactionTimes.current, finalScore, incorrectRef.current,
-            (finalScore / EMOTIONS.length) * 100
+            (finalScore / EMOTIONS.length) * 100,
+            { tapEventLog: tapLog.current, emptySpaceTapCount: emptySpaceTapCountRef.current }
           );
           onComplete({ score: finalScore, total: EMOTIONS.length, behavioralMetrics });
         }
       }, 1500);
     } else {
       incorrectRef.current++;
+      tapLog.current.push({ timestamp: now, type: 'incorrect', reactionTime });
       setFeedback('Not quite... look closer!');
+    }
+  };
+
+  const handleEmptySpaceTap = () => {
+    const now = Date.now();
+    if (now - lastElementTapTimeRef.current > 20) {
+      const reactionTime = now - lastTapTimeRef.current;
+      lastTapTimeRef.current = now;
+      tapLog.current.push({ timestamp: now, type: 'empty_space', reactionTime });
+      emptySpaceTapCountRef.current++;
     }
   };
 
@@ -79,18 +104,20 @@ export default function EmotionDetective({ profile, onComplete }: Props) {
         </Text>
       ) : <View style={styles.feedbackPlaceholder} />}
 
-      <View style={styles.optionsGrid}>
-        {options.map((option, i) => (
-          <TouchableOpacity
-            key={i}
-            style={styles.optionBtn}
-            onPress={() => handleSelect(option)}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.optionText}>{option.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Pressable style={styles.optionsWrapper} onPress={handleEmptySpaceTap}>
+        <View style={styles.optionsGrid}>
+          {options.map((option, i) => (
+            <TouchableOpacity
+              key={i}
+              style={styles.optionBtn}
+              onPress={() => handleSelect(option)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.optionText}>{option.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Pressable>
 
       <Text style={styles.tagline}>Becoming a feeling expert! 🌈</Text>
     </View>
@@ -126,12 +153,18 @@ const styles = StyleSheet.create({
   feedbackPlaceholder: { height: 30, marginBottom: 12 },
   feedbackGood: { color: '#16A34A' },
   feedbackBad: { color: COLORS.orange },
+  optionsWrapper: {
+    width: '100%',
+    padding: 8,
+    backgroundColor: COLORS.gray50,
+    borderRadius: 20,
+    marginBottom: 16,
+  },
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
     justifyContent: 'center',
-    marginBottom: 16,
   },
   optionBtn: {
     backgroundColor: COLORS.white,

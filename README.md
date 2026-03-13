@@ -1,460 +1,282 @@
-# CECI Assessment System - Complete Project
+# CECI — Child Effort-Cognition Index
 
-**Composite Early Childhood Indicator (CECI)** - Early Childhood Intellectual Disability Screening System
+A game-based early childhood developmental screening system that computes the **Child Effort-Cognition Index (CECI)** from interactive gameplay telemetry. Designed for parents, clinicians, and researchers to identify potential cognitive and developmental concerns in young children (ages 2–8) through engaging, non-stressful assessments.
 
-## 🎯 Project Overview
+---
 
-This project implements a game-based assessment system for early childhood intellectual disability screening. It combines a child-friendly React web application with a sophisticated Python ML Pipeline for accurate, reliable developmental assessments.
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 major_project/
-├── copy1/                      # React Web Application
-│   ├── App.tsx                # Main app component
-│   ├── components/            # React components
-│   ├── services/              # API service layer
-│   │   └── ceciApiService.ts # ML Pipeline integration
-│   ├── hooks/                 # Custom React hooks
-│   │   └── useCECICalculation.ts
-│   ├── ceciAlgorithm.ts       # Local TypeScript implementation
-│   ├── types.ts               # TypeScript type definitions
-│   ├── .env.example           # Environment configuration example
-│   └── ML_PIPELINE_INTEGRATION.md  # Integration guide
+├── copy1/                      # React Web Application (primary interface)
+│   ├── App.tsx                 # Main app — onboarding, routing, session logic
+│   ├── components/             # Game + UI components
+│   ├── services/
+│   │   └── ceciService.ts      # CECI parameter estimation & API bridge
+│   ├── types.ts                # TypeScript type definitions
+│   ├── constants.tsx           # Game registry & app-wide constants
+│   └── CECI_ALGORITHM_DOCUMENTATION.md
 │
-├── ml_pipeline/               # Python ML Pipeline (Backend)
-│   ├── api.py                 # FastAPI REST API
-│   ├── pipeline.py            # Pipeline orchestrator
-│   ├── config.py              # Configuration management
-│   ├── validation.py          # Data validation
-│   ├── monitoring.py          # Metrics and health checks
-│   ├── logging_config.py      # Logging system
-│   ├── stages/                # Pipeline stages
-│   │   ├── feature_engineering.py
-│   │   ├── tree_model.py
-│   │   ├── temporal_model.py
-│   │   ├── bayesian_calibration.py
-│   │   └── post_processing.py
-│   ├── tests/                 # Comprehensive test suite (86+ tests)
-│   ├── examples/              # Usage examples
-│   ├── Dockerfile             # Container image
-│   ├── docker-compose.yml     # Docker orchestration
-│   ├── README.md              # ML Pipeline documentation
-│   ├── DEPLOYMENT.md          # Deployment guide
-│   └── ARCHITECTURE.md        # Architecture documentation
+├── mobile/                     # React Native mobile app (Expo)
+│   └── src/
+│       ├── screens/            # Onboarding, Assessment, Results
+│       ├── components/games/   # Mobile game components
+│       ├── ceciAlgorithm.ts    # Local CECI calculation engine
+│       └── hooks/
+│           └── useCECICalculation.ts
 │
-├── start-all.sh               # Start both services
-├── stop-all.sh                # Stop all services
-└── README.md                  # This file
+├── ml_pipeline/                # Python ML backend (FastAPI)
+│   ├── api.py                  # REST API endpoints
+│   ├── pipeline.py             # 5-stage ML pipeline orchestrator
+│   ├── stages/                 # Feature engineering, tree model, temporal model,
+│   │                           # Bayesian calibration, post-processing
+│   ├── tests/                  # 86+ pytest test cases
+│   ├── trained_models/         # Serialised model artefacts (.joblib)
+│   ├── README.md               # ML pipeline usage & API reference
+│   ├── ARCHITECTURE.md         # System architecture deep-dive
+│   └── DEPLOYMENT.md           # Docker / cloud deployment guide
+│
+├── start-all.sh                # Start ML pipeline + React app
+├── stop-all.sh                 # Stop all services
+└── clear-sessions.sh           # Wipe browser localStorage session history
 ```
 
-## 🚀 Quick Start
+---
+
+## Quick Start
 
 ### Prerequisites
 
-- **Python 3.8+** with pip
-- **Node.js 16+** with npm
-- **Git** (optional)
+| Requirement | Version |
+|-------------|---------|
+| Python | 3.8+ |
+| Node.js | 16+ |
+| npm | 8+ |
 
-### One-Command Start
+### One-command start
 
 ```bash
-# Make scripts executable (first time only)
-chmod +x start-all.sh stop-all.sh
-
-# Start everything
+chmod +x start-all.sh stop-all.sh clear-sessions.sh   # first time only
 ./start-all.sh
 ```
 
-This will:
-1. Start the ML Pipeline API on port 8000
-2. Start the React App on port 5173
-3. Show you the URLs to access
+This starts:
+- **ML Pipeline API** → http://localhost:8000
+- **React Web App** → http://localhost:3002
 
-### Manual Start
-
-#### Option 1: Start ML Pipeline
-
+To stop everything:
 ```bash
-cd ml_pipeline
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run server
-python run.py server
+./stop-all.sh
 ```
 
-#### Option 2: Start React App
+### Manual start
 
 ```bash
+# Terminal 1 — ML Pipeline
+cd ml_pipeline
+pip install -r requirements.txt
+python run.py server
+
+# Terminal 2 — React Web App
 cd copy1
-
-# Install dependencies
 npm install
-
-# Configure environment
 cp .env.example .env
-
-# Run development server
 npm run dev
 ```
 
-### Access the Application
+---
 
-- **React App**: http://localhost:5173
-- **ML Pipeline API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
+## How It Works
 
-## 🎮 How to Use
+### 1. Role Selection
+Choose one of three roles:
+- **Child** — plays assessment games directly
+- **Parent** — registers child profile, plays games, views results
+- **Doctor** — views full clinical dashboard and can submit official assessment
 
-### 1. Select User Role
+### 2. Child Profile (Parent Registration)
 
-Choose from:
-- **Child**: Play assessment games
-- **Parent**: Manage child profile and view results
-- **Doctor**: Analyze health data and observations
+Fields collected are evidence-based and directly impact scoring calibration:
 
-### 2. Create Child Profile (Parent)
+| Field | Purpose |
+|-------|---------|
+| Name & Date of Birth | Identity + age-indexed norm selection |
+| Sex | Normative data is sex-stratified; boys carry higher ASD/ADHD risk |
+| Born premature? + gestational age (weeks) | Required for corrected-age calculation (ASQ-3, Bayley-4); omitting this causes up to a 17-point scoring error for preterm children |
+| Primary language at home | Bilingual children score >1 SD below monolingual norms on language tests without this context |
+| Family history of ASD/ADHD/ID | Strongest single risk-stratification variable |
+| Known medical conditions | Diagnosed conditions alter score interpretation |
 
-Enter child information:
-- Name, Date of Birth
-- Height, Weight, Blood Group
-- Medical conditions
+> Blood group, height, weight and BMI were intentionally excluded — no validated link exists between these and individual developmental/cognitive screening outcomes.
 
-### 3. Play Games (Child)
+### 3. Assessment Games
 
-Complete interactive games:
-- Reaction Catcher
-- Pattern Memory
-- Emotion Detective
-- Shape Sorter
-- And more...
+Ten interactive games covering four developmental domains:
 
-### 4. View Results (Parent/Doctor)
+| Domain | Games |
+|--------|-------|
+| Cognitive | Pattern Memory, Number Sequencer, Counting Garden, Color Maze |
+| Social / Emotional | Emotion Detective, Follow Leader |
+| Language | Sound Word Game |
+| Attention | Simon Says, Category Sort, Reaction Catcher |
 
-See comprehensive assessment:
-- **CECI Score**: 0-100 with confidence level
-- **Risk Band**: Green (Typical), Amber (Monitor), Red (Specialist)
-- **Model Breakdown**: Tree-Based, Temporal, Bayesian scores
-- **Recommendations**: Personalized guidance
-- **Development Graph**: Visual performance chart
+Each game records: reaction time, accuracy, hesitation periods, completion rate, and trial-level accuracy sequences.
 
-## 🧠 ML Pipeline Features
+### 4. CECI Scoring
 
-### Hybrid ML Approach
-
-Combines three sophisticated models:
-
-1. **Tree-Based Model** (RF/XGBoost simulation)
-   - Feature importance analysis
-   - Weighted behavioral scoring
-   - Baseline risk assessment
-
-2. **Temporal Model** (LSTM/GRU simulation)
-   - Session-by-session trend analysis
-   - Improvement/decline detection
-   - Volatility and consistency scoring
-
-3. **Bayesian Calibration**
-   - Uncertainty quantification
-   - Confidence scoring
-   - Model agreement analysis
-
-### Pipeline Stages
+The CECI score is computed from multi-session gameplay using the paper's longitudinal formulation:
 
 ```
-Game Data → Feature Engineering → Tree Model → Temporal Model
-         → Bayesian Calibration → Post-Processing → CECI Score
+CECI = w₁·PID + w₂·(1 − Var(Acc)) − w₃·PEff
 ```
 
-### Risk Bands
+Where:
+- **PID** — Persistent Intellectual Difficulty (probability of persistent cognitive difficulty)
+- **Var(Acc)** — Cross-session accuracy variance (consistency)
+- **PEff** — Effort inconsistency probability
 
-- **🟢 Green (≥70%)**: Typical development - Continue current activities
-- **🟡 Amber (40-69%)**: Monitor closely - Increase practice frequency
-- **🔴 Red (<40%)**: Specialist recommended - Seek professional assessment
+Default weights: `w₁ = 0.50`, `w₂ = 0.30`, `w₃ = 0.20`
 
-## 🔗 Integration
+#### Risk Bands
 
-The React app integrates with the ML Pipeline through:
+| Band | CECI Score | Meaning | Action |
+|------|-----------|---------|--------|
+| 🟢 Green | 0.00 – 0.40 | Low Risk — Typical development | Continue regular activities |
+| 🟡 Amber | 0.40 – 0.65 | Moderate Risk — Monitor | Increase session frequency |
+| 🔴 Red | 0.65 – 1.00 | High Risk — Refer | Seek specialist assessment |
 
-1. **API Service Layer** (`ceciApiService.ts`)
-2. **Custom React Hook** (`useCECICalculation`)
-3. **Automatic Fallback** to local calculation if API unavailable
+#### Multi-Session Longitudinal Mode
 
-### Status Indicators
+After 2+ sessions, the system activates full longitudinal analysis:
+- Cross-session Var(Acc) computed per paper Eq.(3)
+- PID recalculated across session history stored in browser localStorage
+- Classification indicators: Cognitive Risk Score, Emotional Variability, Effort Variability
 
-The Results page shows:
-- **✓ ML Pipeline**: Using Python ML Pipeline API
-- **⚠ Local Mode**: Using local TypeScript fallback
-- **API offline**: Informational message about fallback
+Session history utilities:
+```bash
+./clear-sessions.sh        # Clear browser localStorage via URL hook
+```
+Or use the **Clear History** button on the Results page.
 
-See `copy1/ML_PIPELINE_INTEGRATION.md` for detailed integration documentation.
+### 5. ML Pipeline (Backend)
 
-## 📊 Data Flow
+The Python backend runs a 5-stage ML pipeline for production-grade scoring:
 
 ```
-User Interaction (Games)
-         ↓
-Behavioral Data Collection
-(reaction time, accuracy, hesitation, engagement)
-         ↓
-React App (Frontend)
-         ↓
-API Service Layer
-         ↓
-ML Pipeline (Backend)
-         ↓
-  Stage 1: Feature Engineering
-  Stage 2: Tree-Based Model
-  Stage 3: Temporal Model
-  Stage 4: Bayesian Calibration
-  Stage 5: Post-Processing
-         ↓
-CECI Score Result
-         ↓
-Display in UI
+Game telemetry
+    → Stage 1: Feature Engineering
+    → Stage 2: Tree-Based Model (RF/XGBoost)
+    → Stage 3: Temporal Model (LSTM/GRU simulation)
+    → Stage 4: Bayesian Calibration
+    → Stage 5: Post-Processing
+    → CECI Score + confidence + risk band
 ```
 
-## 🧪 Testing
+The React app calls the pipeline via `/api/ceci/analyze` and automatically falls back to the local TypeScript implementation if the API is unavailable.
 
-### ML Pipeline Tests
+API docs: http://localhost:8000/docs
+
+---
+
+## Domain Assessment Indices
+
+Six neuropsychological domain scores are derived from game performance:
+
+| Index | Full Name | Games |
+|-------|-----------|-------|
+| VMI | Visual-Motor Integration | Color Maze, Number Sequencer |
+| FRI | Fluid Reasoning Index | Pattern Memory, Counting Garden |
+| LCI | Language Comprehension Index | Sound Word Game |
+| IFI | Inhibitory Function Index | Simon Says, Category Sort |
+| API | Attention Processing Index | Reaction Catcher |
+| ATI | Attention-Task Integration | Follow Leader, Emotion Detective |
+
+---
+
+## Configuration
+
+### React App (`copy1/.env`)
+
+```bash
+VITE_API_BASE_URL=http://localhost:8000    # ML Pipeline URL
+VITE_USE_ML_PIPELINE=true                  # Enable API scoring
+VITE_ENABLE_FALLBACK=true                  # Fall back to local if API down
+VITE_API_TIMEOUT=10000                     # Request timeout (ms)
+```
+
+### ML Pipeline (`ml_pipeline/config.py`)
+
+```python
+GREEN_THRESHOLD = 0.40     # CECI ≤ 0.40 → green
+AMBER_THRESHOLD = 0.65     # CECI ≤ 0.65 → amber, else red
+```
+
+---
+
+## Testing
+
+### ML Pipeline
 
 ```bash
 cd ml_pipeline
-
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=ml_pipeline --cov-report=html
-
-# Run specific test file
-pytest tests/test_pipeline.py -v
+pytest                              # Run all 86+ tests
+pytest --cov=ml_pipeline            # With coverage report
+pytest tests/test_pipeline.py -v    # Specific test file
 ```
-
-**Test Coverage**: 86+ test cases across all pipeline stages
 
 ### React App
 
 ```bash
 cd copy1
-
-# Run tests (if configured)
-npm test
+npm run build    # TypeScript compile check
 ```
-
-## 📦 Deployment
-
-### Development
-
-Use the quick start scripts or manual commands above.
-
-### Production
-
-#### ML Pipeline
-
-See `ml_pipeline/DEPLOYMENT.md` for comprehensive deployment guide.
-
-Options:
-- **Docker**: `docker-compose up`
-- **Systemd**: Linux service configuration
-- **Cloud**: AWS, GCP, Azure deployment guides
-
-#### React App
-
-```bash
-cd copy1
-
-# Build for production
-npm run build
-
-# Deploy dist/ folder to web server
-```
-
-Update `.env.production` with production API URL.
-
-## 🛠️ Configuration
-
-### ML Pipeline Configuration
-
-Edit `ml_pipeline/config.py` or use environment variables:
-
-```python
-# Risk thresholds
-GREEN_THRESHOLD = 70.0
-AMBER_THRESHOLD = 40.0
-
-# Model weights
-TREE_MODEL_WEIGHTS = {
-    'accuracy': 0.35,
-    'reaction': 0.25,
-    'hesitation': 0.20,
-    'engagement': 0.20
-}
-```
-
-### React App Configuration
-
-Edit `copy1/.env`:
-
-```bash
-# ML Pipeline API URL
-VITE_API_BASE_URL=http://localhost:8000
-
-# Enable ML Pipeline
-VITE_USE_ML_PIPELINE=true
-
-# Enable fallback
-VITE_ENABLE_FALLBACK=true
-```
-
-## 📈 Monitoring
-
-### ML Pipeline Metrics
-
-- **Execution Time**: Per-stage and total
-- **Prediction Count**: Total assessments
-- **Risk Band Distribution**: Green/Amber/Red counts
-- **Error Tracking**: Failed predictions
-- **API Health**: `/health` endpoint
-
-### Logs
-
-```bash
-# ML Pipeline logs
-tail -f ml_pipeline/logs/ceci_pipeline_*.log
-
-# React App console
-# Check browser developer tools
-```
-
-## 🆘 Troubleshooting
-
-### API Not Connecting
-
-**Problem**: React app shows "Local Mode" always
-
-**Solutions**:
-1. Check ML Pipeline is running: `curl http://localhost:8000/health`
-2. Verify `.env` has correct `VITE_API_BASE_URL`
-3. Check for CORS errors in browser console
-4. Ensure no firewall blocking port 8000
-
-### CORS Errors
-
-**Problem**: Browser blocks API requests
-
-**Solution**: Update `ml_pipeline/api.py`:
-
-```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://your-domain.com"  # Add your domain
-    ],
-    ...
-)
-```
-
-### Port Already in Use
-
-**Problem**: Can't start services
-
-**Solutions**:
-```bash
-# Kill process on port 8000
-lsof -ti:8000 | xargs kill -9
-
-# Kill process on port 5173
-lsof -ti:5173 | xargs kill -9
-
-# Or use different ports
-python run.py server --port 8001
-npm run dev -- --port 5174
-```
-
-## 📚 Documentation
-
-- **Main README**: This file
-- **ML Pipeline**:
-  - `ml_pipeline/README.md` - Usage and API documentation
-  - `ml_pipeline/ARCHITECTURE.md` - System architecture
-  - `ml_pipeline/DEPLOYMENT.md` - Deployment guide
-- **React App**:
-  - `copy1/ML_PIPELINE_INTEGRATION.md` - Integration guide
-  - `copy1/CECI_ALGORITHM_DOCUMENTATION.md` - Algorithm details
-  - `copy1/VISUAL_GUIDE.md` - UI visual guide
-- **Implementation**:
-  - `IMPLEMENTATION_SUMMARY.md` - Original implementation summary
-
-## 🎯 Key Features
-
-### React App (copy1/)
-
-- ✅ Child-friendly game interface
-- ✅ Parent/Child/Doctor role system
-- ✅ Comprehensive child profile management
-- ✅ Parent observations diary
-- ✅ Real-time CECI assessment display
-- ✅ Development performance graphs
-- ✅ ML Pipeline integration with fallback
-- ✅ Responsive, accessible design
-
-### ML Pipeline (ml_pipeline/)
-
-- ✅ Modular 5-stage architecture
-- ✅ REST API with FastAPI
-- ✅ Comprehensive data validation
-- ✅ Advanced logging and monitoring
-- ✅ 86+ test suite with pytest
-- ✅ Docker deployment support
-- ✅ Production-ready error handling
-- ✅ Configurable hyperparameters
-
-## 🚧 Future Enhancements
-
-- [ ] Real ML models (trained RF, LSTM)
-- [ ] Database integration for persistence
-- [ ] User authentication system
-- [ ] Longitudinal tracking dashboard
-- [ ] PDF report generation
-- [ ] Multi-language support
-- [ ] Mobile app (React Native)
-- [ ] Offline mode with sync
-- [ ] Advanced analytics
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Update documentation
-6. Submit a pull request
-
-## 📄 License
-
-Copyright © 2026 CECI Project
-
-## 👥 Team
-
-CECI Project Team
-
-## 📞 Support
-
-For issues or questions:
-1. Check the documentation
-2. Review troubleshooting section
-3. Check browser/server logs
-4. Open an issue on GitHub
 
 ---
 
-**Version**: 1.0.0
-**Last Updated**: January 2026
-**Status**: Production Ready ✅
+## Troubleshooting
 
-Built with ❤️ using React, TypeScript, Python, FastAPI, and Modern ML techniques
+| Problem | Solution |
+|---------|----------|
+| Results page shows data with 0 games played | Run `./clear-sessions.sh` to wipe stale localStorage |
+| React app shows "Local Mode" always | Check `curl http://localhost:8000/health` and verify `.env` |
+| CORS errors in browser console | Add your origin to `allow_origins` in `ml_pipeline/api.py` |
+| Port 8000 / 3002 already in use | `lsof -ti:8000 \| xargs kill -9` |
+
+---
+
+## Documentation
+
+| File | Contents |
+|------|----------|
+| `copy1/CECI_ALGORITHM_DOCUMENTATION.md` | Algorithm internals — PID, Var(Acc), PEff, fusion formula |
+| `ml_pipeline/README.md` | API reference, endpoints, request/response schemas |
+| `ml_pipeline/ARCHITECTURE.md` | Pipeline stage architecture and data flow |
+| `ml_pipeline/DEPLOYMENT.md` | Docker, systemd, and cloud deployment guides |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Web Frontend | React 18, TypeScript, Vite, Tailwind CSS |
+| Mobile | React Native, Expo |
+| ML Backend | Python 3.8+, FastAPI, scikit-learn, NumPy, pandas |
+| Testing | pytest (86+ cases) |
+| Deployment | Docker, docker-compose |
+
+---
+
+## References
+
+This system implements the longitudinal CECI formulation from the research paper on game-based intellectual disability screening. Key external standards informing the child profile design:
+
+- ASQ-3 (Ages & Stages Questionnaires) — corrected age protocol
+- Bayley Scales of Infant and Toddler Development (4th ed.) — prematurity adjustment
+- AAP developmental screening guidelines
+- PMC8412365 — corrected vs. chronological age scoring in preterm children
+
+---
+
+**Status:** Active development
+**Last updated:** March 2026

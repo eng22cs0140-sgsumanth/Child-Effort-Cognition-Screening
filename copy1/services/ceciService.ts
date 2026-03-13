@@ -53,7 +53,15 @@ export const computeCECI = (
   return Math.max(0, Math.min(1, ceci));
 };
 
-export const classifyRiskBand = (ceci: number): typeof RISK_BANDS['green'] & { band: 'green' | 'amber' | 'red' } => {
+export const classifyRiskBand = (
+  ceci: number,
+  pid?: number,
+  multiSession?: boolean
+): typeof RISK_BANDS['green'] & { band: 'green' | 'amber' | 'red' } => {
+  // Override: strong persistent difficulty across multiple sessions → red regardless of CECI score
+  if (pid !== undefined && pid > 0.70 && multiSession && ceci >= RISK_BANDS.amber.min) {
+    return { ...RISK_BANDS.red, band: 'red' };
+  }
   if (ceci >= RISK_BANDS.red.min) return { ...RISK_BANDS.red, band: 'red' };
   if (ceci >= RISK_BANDS.amber.min) return { ...RISK_BANDS.amber, band: 'amber' };
   return { ...RISK_BANDS.green, band: 'green' };
@@ -95,7 +103,7 @@ const generateClinicalNote = (
 
 // ── Domain Index Mapping (paper's game categories → neuropsychological indices) ──
 const DOMAIN_GAMES: Record<keyof DomainIndices, string[]> = {
-  VMI: ['maze', 'shapes'],      // Visual-Motor Integration
+  VMI: ['maze', 'numbersequencer'],  // Visual-Motor Integration
   FRI: ['memory', 'counting'],  // Fluid Reasoning Index
   LCI: ['sound'],               // Language Comprehension Index
   IFI: ['simon', 'category'],   // Inhibitory Function Index
@@ -153,13 +161,14 @@ export const getCECIBreakdown = async (
   pid: number,
   varAcc: number,
   peff: number,
-  sessionAccuracies?: number[]
+  sessionAccuracies?: number[],
+  multiSession?: boolean
 ): Promise<CECIResult> => {
   try {
     const response = await fetch('/api/ceci/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pid, var_acc: varAcc, peff, session_accuracies: sessionAccuracies }),
+      body: JSON.stringify({ pid, var_acc: varAcc, peff, session_accuracies: sessionAccuracies, multi_session: multiSession }),
     });
 
     if (!response.ok) {
@@ -181,7 +190,7 @@ export const getCECIBreakdown = async (
     // Fallback logic if backend is unavailable
     const w = DEFAULT_WEIGHTS;
     const ceci = Math.max(0, Math.min(1, w.w1 * pid + w.w2 * (1.0 - varAcc) - w.w3 * peff));
-    const risk = classifyRiskBand(ceci);
+    const risk = classifyRiskBand(ceci, pid, multiSession);
 
     return {
       ceciScore: ceci,

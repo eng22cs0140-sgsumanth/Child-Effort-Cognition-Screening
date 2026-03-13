@@ -41,6 +41,35 @@ class FeatureEngineeringStage(PipelineStage):
         engagement_seq = [m['engagementScore'] for m in metrics_array]
         hesitation_seq = [m['hesitationCount'] for m in metrics_array]
 
+        # EVI sub-metrics (new fields with defaults for backward compat)
+        def _get(m, key, default=0.0):
+            return m.get(key, default)
+
+        wsd_seq = [_get(m, 'withinSessionDegradation') for m in metrics_array]
+        fbc_seq = [_get(m, 'frustrationBurstCount') for m in metrics_array]
+        edr_seq = [_get(m, 'engagementDropRate') for m in metrics_array]
+        rtsc_seq = [_get(m, 'reactionTimeSpikeCount') for m in metrics_array]
+        total_taps_seq = [_get(m, 'totalTapCount', 1) for m in metrics_array]
+        empty_taps_seq = [_get(m, 'emptySpaceTapCount') for m in metrics_array]
+
+        empty_space_ratios = [
+            e / max(t, 1) for e, t in zip(empty_taps_seq, total_taps_seq)
+        ]
+
+        def _evi(m):
+            total = max(_get(m, 'totalTapCount', 1), 1)
+            ratio = _get(m, 'emptySpaceTapCount') / total
+            return min(1.0, (
+                0.30 * _get(m, 'withinSessionDegradation') +
+                0.25 * min(_get(m, 'frustrationBurstCount') / 3.0, 1.0) +
+                0.20 * _get(m, 'engagementDropRate') +
+                0.15 * min(_get(m, 'reactionTimeSpikeCount') / 5.0, 1.0) +
+                0.10 * min(ratio / 0.5, 1.0)
+            ))
+
+        evi_seq = [_evi(m) for m in metrics_array]
+        avg_evi = float(np.mean(evi_seq)) if evi_seq else 0.0
+
         # Compute features
         features = {
             # Aggregated features
@@ -62,7 +91,16 @@ class FeatureEngineeringStage(PipelineStage):
             # Raw sequences for temporal models
             'accuracy_sequence': accuracy_seq,
             'reaction_time_sequence': reaction_time_seq,
-            'engagement_sequence': engagement_seq
+            'engagement_sequence': engagement_seq,
+
+            # EVI / emotional variability features
+            'avg_within_session_degradation': float(np.mean(wsd_seq)),
+            'avg_frustration_burst_count': float(np.mean(fbc_seq)),
+            'avg_engagement_drop_rate': float(np.mean(edr_seq)),
+            'avg_rt_spike_count': float(np.mean(rtsc_seq)),
+            'avg_empty_space_ratio': float(np.mean(empty_space_ratios)),
+            'emotional_variability_index': avg_evi * 100,  # 0-100
+            'evi_sequence': evi_seq,
         }
 
         context['features'] = features
@@ -83,7 +121,14 @@ class FeatureEngineeringStage(PipelineStage):
             'consistency_score': 0.0,
             'accuracy_sequence': [],
             'reaction_time_sequence': [],
-            'engagement_sequence': []
+            'engagement_sequence': [],
+            'avg_within_session_degradation': 0.0,
+            'avg_frustration_burst_count': 0.0,
+            'avg_engagement_drop_rate': 0.0,
+            'avg_rt_spike_count': 0.0,
+            'avg_empty_space_ratio': 0.0,
+            'emotional_variability_index': 0.0,
+            'evi_sequence': [],
         }
 
     def _calculate_trend(self, values: List[float]) -> float:

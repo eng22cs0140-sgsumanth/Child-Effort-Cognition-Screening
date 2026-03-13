@@ -25,7 +25,14 @@ export interface ChildProfile {
   observations: Observation[];
 }
 
+export interface TapEvent {
+  timestamp: number;      // epoch ms
+  type: 'correct' | 'incorrect' | 'empty_space' | 'counting_tap';
+  reactionTime: number;   // ms since previous tap or stimulus display
+}
+
 export interface BehavioralMetrics {
+  // --- Core metrics ---
   reactionTimes: number[];
   accuracy: number;
   hesitationCount: number;
@@ -34,6 +41,19 @@ export interface BehavioralMetrics {
   incorrectAttempts: number;
   averageReactionTime: number;
   reactionTimeVariability: number;
+
+  // --- Tap tracking ---
+  totalTapCount: number;
+  emptySpaceTapCount: number;
+  consecutiveEmptySpaceTaps: number;    // Max run of consecutive empty-space taps
+  impulsiveTapCount: number;            // Taps with reactionTime < 200ms
+  tapEventLog: TapEvent[];              // Full ordered tap log
+
+  // --- Within-session emotional variability ---
+  withinSessionDegradation: number;     // (first_half_acc - second_half_acc) / max(first_half_acc, 1) [0-1]
+  frustrationBurstCount: number;        // Count of runs of ≥3 consecutive incorrect+empty taps
+  engagementDropRate: number;           // (peak_engagement - final_engagement) / max(peak_engagement, 1) [0-1]
+  reactionTimeSpikeCount: number;       // Count of RTs > 3× session average
 }
 
 export interface SessionData {
@@ -54,7 +74,7 @@ export interface GameResult {
 export type GameType =
   | 'catcher'
   | 'memory'
-  | 'shapes'
+  | 'numbersequencer'
   | 'sound'
   | 'leader'
   | 'counting'
@@ -73,6 +93,12 @@ export interface GameMetadata {
 }
 
 export type RiskBand = 'green' | 'amber' | 'red';
+
+export type PrimaryClassification =
+  | 'typical'
+  | 'emotional_variability'
+  | 'effort_variability'
+  | 'cognitive_risk';
 
 export interface CECIComponentPID {
   value: number;
@@ -110,14 +136,18 @@ export interface CECIScore {
   temporalScore: number;
   bayesianCalibration: number;
   recommendation: string;
-  // New fields from Flask API (optional for backward compat with local fallback):
-  pid?: number;              // Probability of persistent cognitive difficulty (0-1)
-  peff?: number;             // Probability of low effort (0-1)
-  uncertainty?: number;      // 0-1
+  // Flask API fields (optional for backward compat):
+  pid?: number;
+  peff?: number;
+  uncertainty?: number;
   clinicalNote?: string;
   components?: CECIComponents;
   ageGroup?: string;
   nSessions?: number;
+  // 3-way classification:
+  primaryClassification?: PrimaryClassification;
+  emotionalVariabilityScore?: number;   // 0-100 (EVI × 100)
+  effortVariabilityScore?: number;      // 0-100
 }
 
 export interface ModelOutputs {

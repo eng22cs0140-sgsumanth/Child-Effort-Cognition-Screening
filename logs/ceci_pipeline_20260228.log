@@ -1,2 +1,0 @@
-2026-02-28 00:41:41 | INFO     | ml_pipeline.logging_config | setup_logging:120 | Logging initialized - Level: INFO
-2026-02-28 00:41:41 | INFO     | ml_pipeline.logging_config | setup_logging:122 | Log file: logs/ceci_pipeline_20260228.log

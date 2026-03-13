@@ -27,11 +27,12 @@ const App: React.FC = () => {
     name: '',
     dob: '',
     age: 0,
-    bloodGroup: '',
-    height: 0,
-    weight: 0,
-    bmi: 0,
-    conditions: '',
+    sex: '',
+    isPremature: false,
+    gestationalAgeWeeks: 0,
+    primaryLanguage: '',
+    familyHistoryOfDD: false,
+    knownConditions: '',
     observations: []
   });
 
@@ -93,12 +94,6 @@ const App: React.FC = () => {
     return Math.max(0, Math.min(9, age));
   };
 
-  const calculateBMI = (heightCm: number, weightKg: number) => {
-    if (heightCm <= 0 || weightKg <= 0) return 0;
-    const heightM = heightCm / 100;
-    return parseFloat((weightKg / (heightM * heightM)).toFixed(1));
-  };
-
   const handleAddObservation = (text: string) => {
     const newObs: Observation = {
       id: Date.now().toString(),
@@ -113,7 +108,7 @@ const App: React.FC = () => {
 
   const getCategoryScores = () => {
     const categories = {
-      cognitive: { games: ['memory', 'shapes', 'counting', 'maze'], total: 0, count: 0 },
+      cognitive: { games: ['memory', 'numbersequencer', 'counting', 'maze'], total: 0, count: 0 },
       social: { games: ['emotion', 'leader'], total: 0, count: 0 },
       language: { games: ['sound'], total: 0, count: 0 },
       attention: { games: ['simon', 'category', 'catcher'], total: 0, count: 0 },
@@ -150,8 +145,16 @@ const App: React.FC = () => {
 
   const [ceciAnalysis, setCeciAnalysis] = useState<CECIResult | null>(null);
 
-  // Load session history from localStorage on mount
+  // Load session history from localStorage on mount.
+  // If URL contains ?clearSessions=1, wipe stored history first (used by clear-sessions.sh).
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('clearSessions') === '1') {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      // Strip the query param from the URL without reloading
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
     try {
       const stored = localStorage.getItem(SESSION_STORAGE_KEY);
       if (stored) setSessionHistory(JSON.parse(stored));
@@ -172,16 +175,21 @@ const App: React.FC = () => {
   }, [results]);
 
   // Multi-session CECI analysis using paper's longitudinal formulation
+  // Only compute when the child has actually played games in the current session
   useEffect(() => {
+    if (results.length === 0) {
+      setCeciAnalysis(null);
+      return;
+    }
     const analyze = async () => {
       const prevSessions = sessionHistory.filter(s => s.id !== currentSessionId);
       const params = estimateCECIParametersFromSessions(prevSessions, results);
       const allAccuracies = [
         ...prevSessions.map(s => s.sessionAccuracy),
-        ...(results.length > 0 ? [results.reduce((sum, r) => sum + r.score / 100, 0) / results.length] : [])
+        results.reduce((sum, r) => sum + r.score / 100, 0) / results.length
       ];
       try {
-        const analysis = await getCECIBreakdown(params.pid, params.varAcc, params.peff, allAccuracies);
+        const analysis = await getCECIBreakdown(params.pid, params.varAcc, params.peff, allAccuracies, !params.insufficientData);
         setCeciAnalysis(analysis);
       } catch (error) {
         console.error("Analysis failed", error);
@@ -190,10 +198,12 @@ const App: React.FC = () => {
     analyze();
   }, [results, sessionHistory]);
 
-  // Derived session counts
+  // Derived session counts — only count a session when games have been played
   const prevSessions = sessionHistory.filter(s => s.id !== currentSessionId);
-  const totalSessions = prevSessions.length + (results.length > 0 ? 1 : 0);
-  const ceciParams = estimateCECIParametersFromSessions(prevSessions, results);
+  const totalSessions = results.length > 0 ? prevSessions.length + 1 : 0;
+  const ceciParams = results.length > 0
+    ? estimateCECIParametersFromSessions(prevSessions, results)
+    : { pid: 0, varAcc: 0, peff: 0, insufficientData: true };
 
   const handleRoleSelection = (selectedRole: UserRole) => {
     setRole(selectedRole);
@@ -352,83 +362,153 @@ const App: React.FC = () => {
         return (
           <div className="max-w-3xl mx-auto py-10 px-4 animate-pop-in">
             <div className="bg-white p-10 rounded-[4rem] kids-shadow border-4 border-purple-100 relative overflow-hidden">
-              <h2 className="text-4xl font-black text-purple-600 mb-10 text-center">Child Super Profile</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="col-span-full md:col-span-1">
-                  <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Child's Name</label>
-                  <input type="text" className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl" value={child.name} onChange={e => setChild({...child, name: e.target.value})} placeholder="Enter name" />
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 to-orange-500"></div>
+              <h2 className="text-4xl font-black text-purple-600 mb-2 text-center">Child Profile</h2>
+              <p className="text-center text-slate-400 font-bold text-sm mb-10">This information helps calibrate assessment norms accurately.</p>
+
+              {/* ── Section 1: Basic Identity ── */}
+              <p className="text-xs font-black text-purple-400 uppercase tracking-widest mb-4">Basic Information</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                  <label className="block text-gray-500 font-black mb-2 ml-2 text-xs uppercase">Child's Name *</label>
+                  <input type="text" className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-lg" value={child.name} onChange={e => setChild({...child, name: e.target.value})} placeholder="Enter name" />
                 </div>
-                <div className="col-span-full md:col-span-1">
-                  <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Birthday</label>
-                  <input type="date" className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl" value={child.dob} onChange={e => {
+                <div>
+                  <label className="block text-gray-500 font-black mb-2 ml-2 text-xs uppercase">Date of Birth *</label>
+                  <input type="date" className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-lg" value={child.dob} onChange={e => {
                     const age = calculateAge(e.target.value);
                     setChild({...child, dob: e.target.value, age});
                   }} />
                 </div>
 
-                <div className="col-span-full md:col-span-1">
-                  <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Blood Group</label>
-                  <select
-                    className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl appearance-none"
-                    value={child.bloodGroup}
-                    onChange={e => setChild({...child, bloodGroup: e.target.value})}
-                  >
-                    <option value="">Select Group</option>
-                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
-                      <option key={bg} value={bg}>{bg}</option>
+                {/* Sex/Gender — essential for sex-stratified normative scoring */}
+                <div className="col-span-full">
+                  <label className="block text-gray-500 font-black mb-2 ml-2 text-xs uppercase">Sex *</label>
+                  <div className="flex gap-4">
+                    {(['male', 'female', 'other'] as const).map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setChild({...child, sex: s})}
+                        className={`flex-1 py-4 rounded-[2rem] font-black text-lg capitalize transition-all border-4 ${
+                          child.sex === s
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-gray-50 text-gray-500 border-transparent hover:border-purple-200'
+                        }`}
+                      >
+                        {s === 'male' ? '👦 Boy' : s === 'female' ? '👧 Girl' : '⚧ Other'}
+                      </button>
                     ))}
-                  </select>
+                  </div>
                 </div>
 
-                <div className="col-span-full md:col-span-1 grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Height (cm)</label>
-                    <input
-                      type="number"
-                      className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl"
-                      value={child.height || ''}
-                      onChange={e => {
-                        const h = parseFloat(e.target.value) || 0;
-                        setChild({...child, height: h, bmi: calculateBMI(h, child.weight)});
-                      }}
-                      placeholder="cm"
-                    />
+                {/* Age display */}
+                {child.dob && (
+                  <div className="col-span-full bg-purple-50 p-5 rounded-[2rem] border-4 border-purple-100 flex items-center justify-between">
+                    <span className="text-purple-400 font-black text-xs uppercase tracking-widest">Current Age</span>
+                    <span className="text-purple-700 font-black text-3xl">{child.age} <small className="text-base font-bold">years</small></span>
                   </div>
-                  <div>
-                    <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Weight (kg)</label>
-                    <input
-                      type="number"
-                      className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl"
-                      value={child.weight || ''}
-                      onChange={e => {
-                        const w = parseFloat(e.target.value) || 0;
-                        setChild({...child, weight: w, bmi: calculateBMI(child.height, w)});
-                      }}
-                      placeholder="kg"
-                    />
+                )}
+              </div>
+
+              {/* ── Section 2: Birth History ── */}
+              <p className="text-xs font-black text-purple-400 uppercase tracking-widest mb-4">Birth History <span className="text-slate-300 normal-case font-bold">(affects score calibration for young children)</span></p>
+              <div className="grid grid-cols-1 gap-6 mb-8">
+                <div className="bg-slate-50 p-6 rounded-[2rem] border-4 border-transparent">
+                  <label className="block text-gray-600 font-black mb-4 text-sm">Was the child born premature (before 37 weeks)?</label>
+                  <div className="flex gap-4">
+                    {[{ label: 'Yes', val: true }, { label: 'No', val: false }].map(opt => (
+                      <button
+                        key={String(opt.val)}
+                        type="button"
+                        onClick={() => setChild({...child, isPremature: opt.val, gestationalAgeWeeks: opt.val ? child.gestationalAgeWeeks : 0})}
+                        className={`flex-1 py-4 rounded-[2rem] font-black text-lg transition-all border-4 ${
+                          child.isPremature === opt.val
+                            ? 'bg-orange-500 text-white border-orange-500'
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-orange-200'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  {child.isPremature && (
+                    <div className="mt-5">
+                      <label className="block text-gray-500 font-black mb-2 text-xs uppercase">Gestational Age at Birth (weeks)</label>
+                      <input
+                        type="number"
+                        min="22" max="36"
+                        className="w-full p-4 rounded-[1.5rem] bg-white border-4 border-orange-200 focus:border-orange-400 outline-none text-gray-900 font-bold text-lg"
+                        value={child.gestationalAgeWeeks || ''}
+                        onChange={e => setChild({...child, gestationalAgeWeeks: parseInt(e.target.value) || 0})}
+                        placeholder="e.g. 32"
+                      />
+                      <p className="text-orange-500 text-xs font-bold mt-2 ml-2">Used to compute the child's corrected developmental age for accurate scoring.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Section 3: Language & Background ── */}
+              <p className="text-xs font-black text-purple-400 uppercase tracking-widest mb-4">Language & Background <span className="text-slate-300 normal-case font-bold">(recommended)</span></p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                  <label className="block text-gray-500 font-black mb-2 ml-2 text-xs uppercase">Primary Language at Home</label>
+                  <select
+                    className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-lg appearance-none"
+                    value={child.primaryLanguage}
+                    onChange={e => setChild({...child, primaryLanguage: e.target.value})}
+                  >
+                    <option value="">Select language</option>
+                    {['English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Marathi', 'Bengali', 'Gujarati', 'Punjabi', 'Urdu', 'Other'].map(l => (
+                      <option key={l} value={l}>{l}</option>
+                    ))}
+                  </select>
+                  <p className="text-slate-400 text-xs font-bold mt-2 ml-2">Bilingual children need language context for accurate domain scoring.</p>
+                </div>
+
+                <div className="bg-slate-50 p-6 rounded-[2rem] border-4 border-transparent">
+                  <label className="block text-gray-600 font-black mb-1 text-sm">Family history of ASD, ADHD, intellectual disability, or learning disorders?</label>
+                  <p className="text-slate-400 text-xs font-bold mb-4">(in a parent or sibling)</p>
+                  <div className="flex gap-4">
+                    {[{ label: 'Yes', val: true }, { label: 'No / Unknown', val: false }].map(opt => (
+                      <button
+                        key={String(opt.val)}
+                        type="button"
+                        onClick={() => setChild({...child, familyHistoryOfDD: opt.val})}
+                        className={`flex-1 py-3 rounded-[2rem] font-black text-base transition-all border-4 ${
+                          child.familyHistoryOfDD === opt.val
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-purple-200'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
                 <div className="col-span-full">
-                  <div className="bg-purple-50 p-8 rounded-[2.5rem] flex items-center justify-between border-4 border-purple-100 shadow-inner">
-                    <div className="text-center md:text-left">
-                      <span className="text-purple-400 font-black text-xs block uppercase tracking-widest mb-1">Calculated BMI</span>
-                      <span className="text-purple-700 font-black text-5xl">{child.bmi || '--'}</span>
-                    </div>
-                    <div className="text-center md:text-right">
-                       <span className="text-gray-400 font-bold text-xs block uppercase tracking-widest mb-1">Current Age</span>
-                       <span className="text-gray-800 font-black text-4xl">{child.age} <small className="text-lg">Years</small></span>
-                    </div>
-                  </div>
+                  <label className="block text-gray-500 font-black mb-2 ml-2 text-xs uppercase">Known Medical Conditions or Diagnoses</label>
+                  <input
+                    type="text"
+                    className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-lg"
+                    value={child.knownConditions}
+                    onChange={e => setChild({...child, knownConditions: e.target.value})}
+                    placeholder="e.g. None / Epilepsy / Hearing impairment"
+                  />
+                  <p className="text-slate-400 text-xs font-bold mt-2 ml-2">Leave blank if none. Diagnosed conditions affect how results are interpreted.</p>
                 </div>
               </div>
+
               <button
-                disabled={!child.name || !child.dob}
+                disabled={!child.name || !child.dob || !child.sex}
                 onClick={() => navigateTo('results')}
-                className="w-full mt-12 bg-purple-600 text-white py-7 rounded-[2.5rem] font-black text-2xl hover:scale-105 transition-all kids-button-shadow uppercase"
+                className="w-full mt-4 bg-purple-600 text-white py-7 rounded-[2.5rem] font-black text-2xl hover:scale-105 transition-all kids-button-shadow uppercase disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
               >
                 Save & View Report ➜
               </button>
+              <p className="text-center text-slate-400 text-xs font-bold mt-4">* Required fields</p>
             </div>
           </div>
         );
@@ -483,7 +563,7 @@ const App: React.FC = () => {
             </header>
 
             {/* High-Risk Alert Banner (paper: alert systems in Visualization Layer) */}
-            {ceciAnalysis?.riskBand === 'red' && (
+            {results.length > 0 && ceciAnalysis?.riskBand === 'red' && (
               <div className="bg-red-50 border-2 border-red-300 rounded-3xl p-6 mb-8 flex items-center gap-5">
                 <span className="text-4xl">🚨</span>
                 <div>
@@ -503,7 +583,10 @@ const App: React.FC = () => {
                     <span className="text-5xl font-black">{totalSessions}</span>
                     <span className="text-purple-200 font-bold text-lg mb-1">Session{totalSessions !== 1 ? 's' : ''} Recorded</span>
                   </div>
-                  {totalSessions < 2 && (
+                  {totalSessions === 0 && (
+                    <p className="text-purple-300 text-xs font-bold mt-2">No games played yet — play assessment games to start tracking</p>
+                  )}
+                  {totalSessions === 1 && (
                     <p className="text-purple-300 text-xs font-bold mt-2">Play games in another visit to enable cross-session Var(Acc) analysis</p>
                   )}
                   {totalSessions >= 2 && (
@@ -513,22 +596,23 @@ const App: React.FC = () => {
 
                 <div className="bg-white p-8 rounded-[3rem] shadow-xl border-2 border-slate-100">
                   <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2">
-                    <span className="text-2xl">👤</span> Patient Vitals
+                    <span className="text-2xl">👤</span> Child Profile
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {[
                       { label: 'Age', value: `${child.age} yrs`, icon: '🎂', color: 'text-blue-500' },
-                      { label: 'Blood Group', value: child.bloodGroup || 'N/A', icon: '🩸', color: 'text-red-500' },
-                      { label: 'BMI Score', value: child.bmi || 'N/A', icon: '⚖️', color: 'text-green-500' },
-                      { label: 'Height', value: `${child.height || 0} cm`, icon: '📏', color: 'text-purple-500' },
-                      { label: 'Weight', value: `${child.weight || 0} kg`, icon: '🏋️', color: 'text-orange-500' }
+                      { label: 'Sex', value: child.sex ? (child.sex === 'male' ? 'Boy' : child.sex === 'female' ? 'Girl' : 'Other') : 'N/A', icon: child.sex === 'male' ? '👦' : child.sex === 'female' ? '👧' : '⚧', color: 'text-purple-500' },
+                      { label: 'Birth', value: child.isPremature ? `Premature (${child.gestationalAgeWeeks || '?'} wks)` : 'Full-term', icon: '🏥', color: child.isPremature ? 'text-orange-500' : 'text-green-500' },
+                      { label: 'Language', value: child.primaryLanguage || 'Not specified', icon: '🗣️', color: 'text-indigo-500' },
+                      { label: 'Family History', value: child.familyHistoryOfDD ? 'ASD/ADHD/ID reported' : 'None reported', icon: '🧬', color: child.familyHistoryOfDD ? 'text-red-500' : 'text-slate-500' },
+                      ...(child.knownConditions ? [{ label: 'Conditions', value: child.knownConditions, icon: '📋', color: 'text-amber-600' }] : []),
                     ].map((stat, i) => (
-                      <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <div className="flex items-center gap-3">
+                      <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 gap-3">
+                        <div className="flex items-center gap-3 shrink-0">
                           <span className="text-xl">{stat.icon}</span>
                           <span className="text-sm font-black text-slate-400 uppercase">{stat.label}</span>
                         </div>
-                        <span className={`text-lg font-black ${stat.color}`}>{stat.value}</span>
+                        <span className={`text-sm font-black ${stat.color} text-right`}>{stat.value}</span>
                       </div>
                     ))}
                   </div>
@@ -639,21 +723,28 @@ const App: React.FC = () => {
                         Child Effort-Cognition Index · {totalSessions} session{totalSessions !== 1 ? 's' : ''} recorded
                       </p>
                     </div>
-                    <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-3xl border border-slate-100">
-                      <div className="text-right">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Index Score</div>
-                        <div className="text-3xl font-black text-slate-800">{ceciAnalysis?.ceciScore.toFixed(3) || '0.000'}</div>
+                    {results.length > 0 && (
+                      <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                        <div className="text-right">
+                          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Index Score</div>
+                          <div className="text-3xl font-black text-slate-800">{ceciAnalysis?.ceciScore.toFixed(3) || '—'}</div>
+                        </div>
+                        <div
+                          className="px-5 py-2 rounded-xl text-white font-black text-sm shadow-md"
+                          style={{ backgroundColor: ceciAnalysis?.riskColor || '#cbd5e1' }}
+                        >
+                          {ceciAnalysis?.riskLabel || 'Calculating...'}
+                        </div>
                       </div>
-                      <div
-                        className="px-5 py-2 rounded-xl text-white font-black text-sm shadow-md"
-                        style={{ backgroundColor: ceciAnalysis?.riskColor || '#cbd5e1' }}
-                      >
-                        {ceciAnalysis?.riskLabel || 'Analysis Pending'}
-                      </div>
-                    </div>
+                    )}
                   </div>
 
-                  {ceciParams.insufficientData ? (
+                  {results.length === 0 ? (
+                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 p-8 rounded-3xl text-center">
+                      <p className="text-slate-500 font-black text-lg mb-2">🎮 No Games Played Yet</p>
+                      <p className="text-slate-400 text-sm font-bold">Play assessment games to generate the CECI score, PID, Consistency, and Effort metrics. All values update dynamically as the child plays.</p>
+                    </div>
+                  ) : ceciParams.insufficientData ? (
                     <div className="bg-amber-50 border-2 border-dashed border-amber-200 p-6 rounded-3xl text-center">
                       <p className="text-amber-700 font-black text-lg mb-1">⚠️ Insufficient Data for Full Analysis</p>
                       <p className="text-amber-600 text-sm font-bold">At least 2 assessment sessions are required to calculate cross-session Var(Acc) and effort metrics per the CECI model. Complete more games and revisit.</p>
@@ -676,14 +767,38 @@ const App: React.FC = () => {
                     <div className="py-10 text-center text-slate-400 font-bold italic">Calculating metrics...</div>
                   )}
 
-                  <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
-                    <h4 className="text-sm font-black text-slate-800 mb-2 flex items-center gap-2">
-                      <span>📋</span> Clinical Interpretation Note
-                    </h4>
-                    <p className="text-slate-600 font-bold text-sm leading-relaxed italic">
-                      "{ceciAnalysis?.clinicalNote || 'Analysis in progress...'}"
-                    </p>
-                  </div>
+                  {/* 3-Way Classification Indicators */}
+                  {results.length > 0 && ceciAnalysis && !ceciParams.insufficientData && (
+                    <div className="mb-6">
+                      <h4 className="text-sm font-black text-slate-700 mb-3 uppercase tracking-wide">Classification Indicators</h4>
+                      <div className="space-y-3">
+                        {[
+                          { label: 'Cognitive Risk Score', value: Math.round(ceciAnalysis.components.pid.value * 100), color: '#EF4444', bg: '#FEF2F2' },
+                          { label: 'Emotional Variability', value: 0, color: '#F59E0B', bg: '#FFFBEB' },
+                          { label: 'Effort Variability', value: Math.round(ceciAnalysis.components.effort.value * 100), color: '#EAB308', bg: '#FEFCE8' },
+                        ].map(ind => (
+                          <div key={ind.label} className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-slate-600 w-36 text-right">{ind.label}</span>
+                            <div className="flex-1 h-3 rounded-full bg-slate-100">
+                              <div className="h-3 rounded-full transition-all duration-500" style={{ width: `${ind.value}%`, backgroundColor: ind.color }} />
+                            </div>
+                            <span className="text-xs font-black w-10" style={{ color: ind.color }}>{ind.value}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {results.length > 0 && (
+                    <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                      <h4 className="text-sm font-black text-slate-800 mb-2 flex items-center gap-2">
+                        <span>📋</span> Clinical Interpretation Note
+                      </h4>
+                      <p className="text-slate-600 font-bold text-sm leading-relaxed italic">
+                        "{ceciAnalysis?.clinicalNote || 'Calculating...'}"
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Official Assessment Form - DOCTOR ONLY */}
@@ -792,6 +907,23 @@ const App: React.FC = () => {
                     <button onClick={() => navigateTo('assessment')} className="w-full bg-[#FF9F1C] text-white py-5 rounded-[2rem] font-black text-xl kids-button-shadow">Play Discovery Games</button>
                   </div>
                 )}
+
+                {/* Session History Reset (dev / admin utility) */}
+                <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-200 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-slate-700 font-black text-sm">Session History</p>
+                    <p className="text-slate-400 text-xs font-bold mt-0.5">{prevSessions.length} previous session{prevSessions.length !== 1 ? 's' : ''} stored in browser</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem(SESSION_STORAGE_KEY);
+                      setSessionHistory([]);
+                    }}
+                    className="bg-red-50 text-red-600 border border-red-200 px-5 py-2.5 rounded-2xl font-black text-sm hover:bg-red-100 transition-all whitespace-nowrap"
+                  >
+                    Clear History
+                  </button>
+                </div>
               </div>
             </div>
           </div>

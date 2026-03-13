@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChildProfile } from '../../types';
+import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { ChildProfile, TapEvent } from '../../types';
 import { COLORS } from '../../constants';
 import { calculateBehavioralMetrics } from '../../ceciAlgorithm';
 
@@ -27,20 +27,35 @@ export default function CategorySort({ profile, onComplete }: Props) {
   const reactionTimes = useRef<number[]>([]);
   const questionStartRef = useRef(Date.now());
 
+  // Tap tracking
+  const lastElementTapTimeRef = useRef<number>(0);
+  const lastTapTimeRef = useRef<number>(Date.now());
+  const tapLog = useRef<TapEvent[]>([]);
+  const emptySpaceTapCountRef = useRef(0);
+
   const target = ITEMS[currentIdx];
 
   const handleSort = (cat: string) => {
+    const now = Date.now();
+    const reactionTime = now - lastTapTimeRef.current;
+    lastTapTimeRef.current = now;
+    lastElementTapTimeRef.current = now;
+
     reactionTimes.current.push(Date.now() - questionStartRef.current);
+
     if (cat === target.category) {
+      tapLog.current.push({ timestamp: now, type: 'correct', reactionTime });
       setScore(s => s + 1);
       setFeedback('Great sorting! 📦');
     } else {
       incorrectRef.current++;
+      tapLog.current.push({ timestamp: now, type: 'incorrect', reactionTime });
       setFeedback('Think again! Is it a food or an animal?');
     }
 
     setTimeout(() => {
       questionStartRef.current = Date.now();
+      lastTapTimeRef.current = Date.now();
       setFeedback('');
       if (currentIdx + 1 < ITEMS.length) {
         setCurrentIdx(i => i + 1);
@@ -48,11 +63,22 @@ export default function CategorySort({ profile, onComplete }: Props) {
         const finalScore = score + (cat === target.category ? 1 : 0);
         const behavioralMetrics = calculateBehavioralMetrics(
           reactionTimes.current, finalScore, incorrectRef.current,
-          (finalScore / ITEMS.length) * 100
+          (finalScore / ITEMS.length) * 100,
+          { tapEventLog: tapLog.current, emptySpaceTapCount: emptySpaceTapCountRef.current }
         );
         onComplete({ score: finalScore, total: ITEMS.length, behavioralMetrics });
       }
     }, 1500);
+  };
+
+  const handleEmptySpaceTap = () => {
+    const now = Date.now();
+    if (now - lastElementTapTimeRef.current > 20) {
+      const reactionTime = now - lastTapTimeRef.current;
+      lastTapTimeRef.current = now;
+      tapLog.current.push({ timestamp: now, type: 'empty_space', reactionTime });
+      emptySpaceTapCountRef.current++;
+    }
   };
 
   return (
@@ -69,22 +95,24 @@ export default function CategorySort({ profile, onComplete }: Props) {
         </Text>
       ) : <View style={styles.fbPlaceholder} />}
 
-      <View style={styles.buttonsRow}>
-        <TouchableOpacity
-          style={[styles.catBtn, { backgroundColor: '#EAB308' }]}
-          onPress={() => handleSort('Food')}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.catBtnText}>🍎 Food</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.catBtn, { backgroundColor: '#3B82F6' }]}
-          onPress={() => handleSort('Animal')}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.catBtnText}>🐘 Animal</Text>
-        </TouchableOpacity>
-      </View>
+      <Pressable style={styles.buttonsWrapper} onPress={handleEmptySpaceTap}>
+        <View style={styles.buttonsRow}>
+          <TouchableOpacity
+            style={[styles.catBtn, { backgroundColor: '#EAB308' }]}
+            onPress={() => handleSort('Food')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.catBtnText}>🍎 Food</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.catBtn, { backgroundColor: '#3B82F6' }]}
+            onPress={() => handleSort('Animal')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.catBtnText}>🐘 Animal</Text>
+          </TouchableOpacity>
+        </View>
+      </Pressable>
     </View>
   );
 }
@@ -123,6 +151,12 @@ const styles = StyleSheet.create({
   fbPlaceholder: { height: 26, marginBottom: 20 },
   feedbackGood: { color: '#16A34A' },
   feedbackBad: { color: COLORS.orange },
+  buttonsWrapper: {
+    width: '100%',
+    padding: 8,
+    backgroundColor: COLORS.gray50,
+    borderRadius: 20,
+  },
   buttonsRow: {
     flexDirection: 'row',
     gap: 16,

@@ -27,11 +27,19 @@ export interface ChildProfile {
   name: string;
   dob: string;
   age: number;
-  bloodGroup: string;
-  height: number; // in cm
-  weight: number; // in kg
-  bmi: number;
-  conditions: string;
+
+  // Essential for normative scoring
+  sex: 'male' | 'female' | 'other' | '';
+
+  // Prematurity — critical for corrected-age calculation (ASQ-3, Bayley-4)
+  isPremature: boolean;
+  gestationalAgeWeeks: number;  // 0 if full-term or unknown
+
+  // Clinical context — affects score interpretation
+  primaryLanguage: string;              // language spoken at home
+  familyHistoryOfDD: boolean;          // family history of ASD, ADHD, ID, or learning disorders
+  knownConditions: string;             // any diagnosed conditions (free text)
+
   observations: Observation[];
 }
 
@@ -58,7 +66,7 @@ export interface AssessmentSession {
 
 // Six neuropsychological domain indices per paper's Scoring & Indices layer
 export interface DomainIndices {
-  VMI: number;  // Visual-Motor Integration   [maze, shapes]
+  VMI: number;  // Visual-Motor Integration   [maze, numbersequencer]
   FRI: number;  // Fluid Reasoning Index       [memory, counting]
   LCI: number;  // Language Comprehension Index [sound]
   IFI: number;  // Inhibitory Function Index   [simon, category]
@@ -69,7 +77,7 @@ export interface DomainIndices {
 export type GameType =
   | 'catcher'
   | 'memory'
-  | 'shapes'
+  | 'numbersequencer'
   | 'sound'
   | 'leader'
   | 'counting'

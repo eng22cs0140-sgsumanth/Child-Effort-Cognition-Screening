@@ -5,7 +5,7 @@ import { GameType, ChildProfile, GameResult } from '../types';
 import { ReactionCatcher } from './ReactionCatcher';
 import { PatternMemory } from './PatternMemory';
 import { EmotionDetective } from './EmotionDetective';
-import { ShapeSorter } from './ShapeSorter';
+import { NumberSequencer } from './NumberSequencer';
 import { CountingGarden } from './CountingGarden';
 import { SoundWordGame } from './SoundWordGame';
 import { FollowLeader } from './FollowLeader';
@@ -38,7 +38,7 @@ export const AssessmentPage: React.FC<Props> = ({ profile, onGameComplete }) => 
       case 'catcher': return <ReactionCatcher profile={profile} onComplete={handleGameEnd} />;
       case 'memory': return <PatternMemory profile={profile} onComplete={handleGameEnd} />;
       case 'emotion': return <EmotionDetective profile={profile} onComplete={handleGameEnd} />;
-      case 'shapes': return <ShapeSorter profile={profile} onComplete={handleGameEnd} />;
+      case 'numbersequencer': return <NumberSequencer profile={profile} onComplete={handleGameEnd} />;
       case 'counting': return <CountingGarden profile={profile} onComplete={handleGameEnd} />;
       case 'sound': return <SoundWordGame profile={profile} onComplete={handleGameEnd} />;
       case 'leader': return <FollowLeader profile={profile} onComplete={handleGameEnd} />;

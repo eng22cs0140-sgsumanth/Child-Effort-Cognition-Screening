@@ -49,11 +49,25 @@ class TemporalModelStage(PipelineStage):
         engagement_std = float(np.std(engagement_seq))
         effort_inconsistency = min(100.0, (volatility_score + engagement_std) / 2)
 
+        # Emotional variability trend (slope of EVI across sessions)
+        evi_seq = features.get('evi_sequence', [])
+        emotional_variability_trend = 0.0
+        if len(evi_seq) >= 2:
+            emotional_variability_trend = self._calculate_trend(
+                evi_seq,
+                config.temporal_model.trend_sensitivity
+            )
+
+        # Overall emotional variability score (0-100)
+        emotional_variability = features.get('emotional_variability_index', 0.0)
+
         temporal_output = {
             'persistentDifficulty': persistent_difficulty,
             'effortInconsistency': effort_inconsistency,
             'improvementTrend': improvement_trend,
-            'volatilityScore': volatility_score
+            'volatilityScore': volatility_score,
+            'emotionalVariabilityTrend': emotional_variability_trend,
+            'emotionalVariability': float(emotional_variability),
         }
 
         context['temporal_model_output'] = temporal_output
