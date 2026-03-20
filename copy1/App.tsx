@@ -611,7 +611,249 @@ const App: React.FC = () => {
         );
       }
 
-      case 'results':
+      case 'results': {
+        // ── PARENT-FRIENDLY DASHBOARD ──────────────────────────────────────
+        if (role === 'parent') {
+          const gameNames: Record<string, string> = {
+            catcher: 'Reaction Catcher', memory: 'Memory Match',
+            numbersequencer: 'Number Sequencer', sound: 'Sound & Words',
+            leader: 'Follow the Leader', counting: 'Counting Garden',
+            emotion: 'Emotion Detective', simon: 'Simon Says',
+            maze: 'Treasure Maze', category: 'Category Sort',
+          };
+
+          const statusInfo = (() => {
+            if (!ceciAnalysis || results.length === 0)
+              return { label: 'No Data Yet', color: '#94a3b8', bg: '#f8fafc', icon: '📊', desc: 'Play some games to see progress here!' };
+            if (ceciAnalysis.riskBand === 'green')
+              return { label: 'On Track', color: '#22c55e', bg: '#f0fdf4', icon: '✅', desc: `${child.name || 'Your child'} is showing steady progress across sessions.` };
+            if (ceciAnalysis.riskBand === 'amber')
+              return { label: 'Needs Attention', color: '#f59e0b', bg: '#fffbeb', icon: '⚠️', desc: `${child.name || 'Your child'} would benefit from a bit more practice and support.` };
+            return { label: 'Seek Support', color: '#ef4444', bg: '#fef2f2', icon: '🔴', desc: `${child.name || 'Your child'} may benefit from a specialist check-up. Please speak to your doctor.` };
+          })();
+
+          const avgScore = results.length > 0 ? results.reduce((s, r) => s + r.score, 0) / results.length : 0;
+          const avgRt = results.reduce((s, r) => s + (r.telemetry?.avgResponseTime ?? 1500), 0) / (results.length || 1);
+
+          const behaviorCards = [
+            {
+              icon: '⚡', label: 'Reaction Speed',
+              value: avgRt < 900 ? 'Fast' : avgRt < 1600 ? 'Good' : 'Developing',
+              color: avgRt < 900 ? '#22c55e' : avgRt < 1600 ? '#3b82f6' : '#f59e0b',
+            },
+            {
+              icon: '🎯', label: 'Accuracy',
+              value: avgScore >= 72 ? 'High' : avgScore >= 48 ? 'Good' : 'Developing',
+              color: avgScore >= 72 ? '#22c55e' : avgScore >= 48 ? '#3b82f6' : '#f59e0b',
+            },
+            {
+              icon: '⏳', label: 'Attention',
+              value: scores.attention >= 70 ? 'Consistent' : scores.attention >= 45 ? 'Sometimes' : 'Variable',
+              color: scores.attention >= 70 ? '#22c55e' : scores.attention >= 45 ? '#3b82f6' : '#f59e0b',
+            },
+            {
+              icon: '🎮', label: 'Engagement Level',
+              value: scores.social >= 70 ? 'Great' : scores.social >= 45 ? 'Good' : 'Could Be Higher',
+              color: scores.social >= 70 ? '#22c55e' : scores.social >= 45 ? '#3b82f6' : '#f59e0b',
+            },
+          ];
+
+          const recommendations = ceciAnalysis?.riskBand === 'red'
+            ? ['Follow up if performance remains inconsistent', 'Speak with your paediatrician about these results', 'Reduce distractions during play sessions', 'Keep a daily activity journal']
+            : ceciAnalysis?.riskBand === 'amber'
+            ? ['Ensure a distraction-free environment', 'Observe attention levels during activities', 'Practice the challenging games more often', 'Reward effort, not just correct answers']
+            : ['Encourage regular short play sessions', 'Try different game types to keep it fun', 'Celebrate every small achievement!', 'Keep screen time balanced and playful'];
+
+          const recIcons = ['🕐', '🔊', '👁', '💗'];
+
+          // Progress chart data — combine previous sessions + current
+          const chartSessions = [
+            ...prevSessions.map(s => Math.round(s.sessionAccuracy * 100)),
+            ...(results.length > 0 ? [Math.round(avgScore)] : []),
+          ].slice(-8);
+
+          const chartW = 280, chartH = 100, chartPad = 10;
+          const chartPoints = chartSessions.map((v, i) => ({
+            x: chartPad + (i / Math.max(chartSessions.length - 1, 1)) * (chartW - 2 * chartPad),
+            y: chartPad + (1 - v / 100) * (chartH - 2 * chartPad),
+          }));
+          const linePath = chartPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+          const areaPath = chartPoints.length > 0
+            ? `${linePath} L ${chartPoints[chartPoints.length - 1].x} ${chartH - chartPad} L ${chartPoints[0].x} ${chartH - chartPad} Z`
+            : '';
+
+          const recentResults = [...results].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+          const toStars = (score: number) => Math.max(1, Math.round(score / 20));
+          const lastSession = sessionHistory.length > 0
+            ? new Date(Math.max(...sessionHistory.map(s => s.date))).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+            : 'No sessions yet';
+
+          return (
+            <div className="container mx-auto px-4 py-8 max-w-4xl animate-pop-in">
+              {/* Header card */}
+              <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-slate-100 p-6 mb-6">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-4xl shrink-0">
+                      {child.sex === 'female' ? '👧' : '👦'}
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-black text-slate-800">{child.name || 'Your Child'}</h1>
+                      <p className="text-slate-500 font-bold">Age {child.age || '—'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 px-5 py-3 rounded-full font-black text-white text-lg shadow-md" style={{ backgroundColor: statusInfo.color }}>
+                    {statusInfo.icon} {statusInfo.label}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4 mt-5 pt-5 border-t border-slate-100">
+                  {[
+                    { icon: '📅', label: 'Last session', value: lastSession },
+                    { icon: '🎮', label: 'Total sessions', value: totalSessions.toString() },
+                    { icon: '⏱', label: 'Games played', value: results.length.toString() },
+                  ].map(s => (
+                    <div key={s.label} className="text-center">
+                      <div className="text-xl mb-1">{s.icon}</div>
+                      <div className="text-slate-400 text-xs font-bold">{s.label}</div>
+                      <div className="text-slate-800 font-black text-lg">{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* LEFT column */}
+                <div className="space-y-6">
+                  {/* Development Status */}
+                  <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-slate-100 p-6">
+                    <h2 className="text-lg font-black text-slate-800 mb-3">Development Status</h2>
+                    <div className="flex items-center gap-2 px-4 py-3 rounded-full font-black text-white text-base mb-3" style={{ backgroundColor: statusInfo.color }}>
+                      {statusInfo.icon} {statusInfo.label}
+                    </div>
+                    <p className="text-slate-600 font-bold text-sm leading-relaxed">{statusInfo.desc}</p>
+                  </div>
+
+                  {/* Progress Over Time */}
+                  <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-slate-100 p-6">
+                    <h2 className="text-lg font-black text-slate-800 mb-3">Progress Over Time</h2>
+                    {chartSessions.length < 2 ? (
+                      <div className="text-center py-6 text-slate-400 font-bold text-sm">
+                        Complete more sessions to see your progress chart 📈
+                      </div>
+                    ) : (
+                      <svg width="100%" viewBox={`0 0 ${chartW} ${chartH + 20}`}>
+                        <defs>
+                          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
+                            <stop offset="100%" stopColor="#6366f1" stopOpacity="0.02" />
+                          </linearGradient>
+                        </defs>
+                        <path d={areaPath} fill="url(#chartGrad)" />
+                        <path d={linePath} fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        {chartPoints.map((p, i) => (
+                          <circle key={i} cx={p.x} cy={p.y} r="4" fill="#6366f1" />
+                        ))}
+                        {chartSessions.map((_, i) => (
+                          <text key={i} x={chartPad + (i / Math.max(chartSessions.length - 1, 1)) * (chartW - 2 * chartPad)} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#94a3b8" fontWeight="bold">{i + 1}</text>
+                        ))}
+                        <text x="2" y={chartPad + 4} fontSize="8" fill="#94a3b8" fontWeight="bold">High</text>
+                        <text x="2" y={chartH - chartPad + 4} fontSize="8" fill="#94a3b8" fontWeight="bold">Low</text>
+                        <text x={chartW / 2} y={chartH + 24} textAnchor="middle" fontSize="9" fill="#94a3b8" fontWeight="bold">Sessions</text>
+                      </svg>
+                    )}
+                  </div>
+
+                  {/* Session History */}
+                  <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-slate-100 p-6">
+                    <h2 className="text-lg font-black text-slate-800 mb-4">Session History</h2>
+                    {recentResults.length === 0 ? (
+                      <p className="text-slate-400 font-bold text-sm text-center py-4">No games played yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {recentResults.map((r, i) => (
+                          <div key={i} className="flex items-center justify-between">
+                            <span className="text-slate-400 font-bold text-xs w-14">
+                              {new Date(r.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                            </span>
+                            <span className="text-slate-700 font-black text-sm flex-1 ml-2">{gameNames[r.gameId] || r.gameId}</span>
+                            <span className="text-lg tracking-tight">
+                              {Array.from({ length: 5 }, (_, si) => (
+                                <span key={si} style={{ color: si < toStars(r.score) ? '#facc15' : '#e2e8f0' }}>★</span>
+                              ))}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Privacy & Safety */}
+                  <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-slate-100 p-6">
+                    <h2 className="text-lg font-black text-slate-800 mb-4">Privacy & Safety</h2>
+                    {['Data is securely stored.', 'No data shared without your permission.'].map(t => (
+                      <div key={t} className="flex items-center gap-3 mb-2">
+                        <span className="text-green-500 font-black">✓</span>
+                        <span className="text-slate-600 font-bold text-sm">{t}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* RIGHT column */}
+                <div className="space-y-6">
+                  {/* Behavior Insights */}
+                  <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-slate-100 p-6">
+                    <h2 className="text-lg font-black text-slate-800 mb-4">Behaviour Insights</h2>
+                    <div className="space-y-3">
+                      {behaviorCards.map(card => (
+                        <div key={card.label} className="flex items-center gap-3 bg-slate-50 rounded-2xl p-4">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0" style={{ backgroundColor: card.color + '22' }}>
+                            {card.icon}
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-slate-700 font-black text-sm">{card.label}</div>
+                            <div className="font-black text-sm" style={{ color: card.color }}>{card.value}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recommendations */}
+                  <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-slate-100 p-6">
+                    <h2 className="text-lg font-black text-slate-800 mb-4">Recommendations</h2>
+                    <div className="space-y-3">
+                      {recommendations.map((rec, i) => (
+                        <div key={i} className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-lg shrink-0 bg-slate-100">{recIcons[i]}</div>
+                          <p className="text-slate-600 font-bold text-sm leading-snug pt-1">{rec}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Play games CTA */}
+                  <button
+                    onClick={() => navigateTo('assessment')}
+                    className="w-full bg-[#FF9F1C] text-white py-5 rounded-[2rem] font-black text-xl kids-button-shadow hover:scale-105 transition-all"
+                  >
+                    🎮 Play Discovery Games
+                  </button>
+
+                  {/* Update Profile */}
+                  <button
+                    onClick={() => { setReAuthInput(''); setReAuthError(''); setShowReAuthModal(true); }}
+                    className="w-full bg-purple-100 text-purple-700 py-4 rounded-[2rem] font-black text-base hover:bg-purple-200 transition-all"
+                  >
+                    ⚙️ Update Profile
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // ── DOCTOR / TECHNICAL DASHBOARD ──────────────────────────────────
         const centerX = 200;
         const centerY = 200;
         const radius = 130;
@@ -1026,6 +1268,7 @@ const App: React.FC = () => {
             </div>
           </div>
         );
+      }
 
       case 'help': return <HelpPage />;
       case 'assessment': return <AssessmentPage profile={child} onGameComplete={handleGameComplete} />;

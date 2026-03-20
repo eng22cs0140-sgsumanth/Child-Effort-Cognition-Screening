@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import { ChildProfile, TapEvent } from '../../types';
 import { COLORS } from '../../constants';
@@ -17,6 +17,11 @@ const ACTIONS = [
   { name: 'Wave', icon: '👋', bg: '#FEF3C7', border: '#FDE68A' },
 ];
 
+// Each action shows for this long, then goes blank before the next one
+const ACTION_DISPLAY_MS = 1500;
+const GAP_BETWEEN_MS = 500;
+const STEP_MS = ACTION_DISPLAY_MS + GAP_BETWEEN_MS;
+
 export default function FollowLeader({ profile, onComplete }: Props) {
   const [sequence, setSequence] = useState<number[]>([]);
   const [userSequence, setUserSequence] = useState<number[]>([]);
@@ -24,87 +29,151 @@ export default function FollowLeader({ profile, onComplete }: Props) {
   const [activeAction, setActiveAction] = useState<number | null>(null);
   const [round, setRound] = useState(1);
   const [message, setMessage] = useState('Watch Starry dance!');
-  const correctRounds = useRef(0);
-  const incorrectAttempts = useRef(0);
-  const reactionTimes = useRef<number[]>([]);
-  const turnStartTime = useRef(0);
+  const [isGameStarted, setIsGameStarted] = useState(false);
+  // Blocks input during celebrations / retry delays
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Refs give async callbacks the latest values without stale closures
+  const sequenceRef = useRef<number[]>([]);
+  const userSequenceRef = useRef<number[]>([]);
+  const transitioningRef = useRef(false);
 
   // Tap tracking
-  const lastElementTapTimeRef = useRef<number>(0);
+  const correctRoundsRef = useRef(0);
+  const incorrectAttemptsRef = useRef(0);
+  const reactionTimesRef = useRef<number[]>([]);
+  const turnStartTimeRef = useRef(0);
   const lastTapTimeRef = useRef<number>(Date.now());
-  const tapLog = useRef<TapEvent[]>([]);
+  const lastElementTapTimeRef = useRef<number>(0);
+  const tapLogRef = useRef<TapEvent[]>([]);
   const emptySpaceTapCountRef = useRef(0);
+
+  // Track all scheduled timeouts so we can cancel them on unmount / round restart
+  const timeoutIds = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const maxRounds = 4;
 
-  const startRound = () => {
-    const len = round + 1;
+  const clearAllTimeouts = () => {
+    timeoutIds.current.forEach(clearTimeout);
+    timeoutIds.current = [];
+  };
+
+  const schedule = (fn: () => void, delay: number) => {
+    const id = setTimeout(fn, delay);
+    timeoutIds.current.push(id);
+    return id;
+  };
+
+  const startRound = useCallback((currentRound: number) => {
+    clearAllTimeouts();
+
+    const len = currentRound + 1;
     const nextSeq = Array.from({ length: len }, () =>
       Math.floor(Math.random() * ACTIONS.length)
     );
+
+    // Update ref immediately — state is for rendering only
+    sequenceRef.current = nextSeq;
+    userSequenceRef.current = [];
+    transitioningRef.current = false;
+
     setSequence(nextSeq);
     setUserSequence([]);
+    setIsTransitioning(false);
     setIsShowing(true);
+    setActiveAction(null);
     setMessage('Watch carefully...');
 
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i >= nextSeq.length) {
-        clearInterval(interval);
-        setIsShowing(false);
-        setActiveAction(null);
-        setMessage('Your turn! Copy the moves!');
-        lastTapTimeRef.current = Date.now();
-        return;
-      }
-      setActiveAction(nextSeq[i]);
-      i++;
-    }, 1000);
-    turnStartTime.current = Date.now() + nextSeq.length * 1000;
-  };
+    // Show each action with a visible gap so repeated moves are distinguishable
+    nextSeq.forEach((actionIdx, i) => {
+      schedule(() => setActiveAction(actionIdx), i * STEP_MS);
+      schedule(() => setActiveAction(null), i * STEP_MS + ACTION_DISPLAY_MS);
+    });
 
+    // Enable player input after the full sequence has played
+    const totalDuration = nextSeq.length * STEP_MS;
+    schedule(() => {
+      setIsShowing(false);
+      setMessage('Your turn! Copy the moves!');
+      lastTapTimeRef.current = Date.now();
+      turnStartTimeRef.current = Date.now();
+    }, totalDuration);
+  }, []);
+
+  // Re-run startRound whenever the round counter increments
   useEffect(() => {
-    const t = setTimeout(startRound, 1000);
-    return () => clearTimeout(t);
-  }, [round]);
+    if (!isGameStarted) return;
+    const id = setTimeout(() => startRound(round), 800);
+    return () => {
+      clearTimeout(id);
+      clearAllTimeouts();
+    };
+  }, [round, isGameStarted, startRound]);
+
+  // Clean up on unmount
+  useEffect(() => () => clearAllTimeouts(), []);
 
   const handleAction = (idx: number) => {
-    if (isShowing) return;
+    // Block if sequence is playing, game hasn't started, or in a transition delay
+    if (isShowing || !isGameStarted || transitioningRef.current) return;
 
     const now = Date.now();
     const reactionTime = now - lastTapTimeRef.current;
     lastTapTimeRef.current = now;
     lastElementTapTimeRef.current = now;
 
-    const nextUserSeq = [...userSequence, idx];
+    // Use refs for guaranteed up-to-date values
+    const currentSeq = sequenceRef.current;
+    const currentUserSeq = userSequenceRef.current;
+    const expected = currentSeq[currentUserSeq.length];
+    const nextUserSeq = [...currentUserSeq, idx];
+
+    userSequenceRef.current = nextUserSeq;
     setUserSequence(nextUserSeq);
 
-    if (idx !== sequence[userSequence.length]) {
-      incorrectAttempts.current++;
-      tapLog.current.push({ timestamp: now, type: 'incorrect', reactionTime });
-      setMessage("Oh no! Let's try the round again!");
-      setTimeout(startRound, 1500);
+    // Brief visual flash on the pressed button
+    setActiveAction(idx);
+    schedule(() => setActiveAction(null), 300);
+
+    if (idx !== expected) {
+      // Wrong move — lock input then restart the round
+      incorrectAttemptsRef.current++;
+      tapLogRef.current.push({ timestamp: now, type: 'incorrect', reactionTime });
+      transitioningRef.current = true;
+      setIsTransitioning(true);
+      setMessage("Oh no! Let's try the round again! 🔄");
+      schedule(() => startRound(round), 1600);
       return;
     }
 
-    tapLog.current.push({ timestamp: now, type: 'correct', reactionTime });
+    tapLogRef.current.push({ timestamp: now, type: 'correct', reactionTime });
 
-    if (userSequence.length === 0) {
-      reactionTimes.current.push(Math.max(0, Date.now() - turnStartTime.current));
+    // Record reaction time on the first move of each turn
+    if (currentUserSeq.length === 0) {
+      reactionTimesRef.current.push(Math.max(0, now - turnStartTimeRef.current));
     }
 
-    if (nextUserSeq.length === sequence.length) {
-      correctRounds.current++;
+    if (nextUserSeq.length === currentSeq.length) {
+      // Completed the sequence for this round
+      correctRoundsRef.current++;
+      transitioningRef.current = true;
+      setIsTransitioning(true);
+
       if (round >= maxRounds) {
-        const behavioralMetrics = calculateBehavioralMetrics(
-          reactionTimes.current, correctRounds.current, incorrectAttempts.current,
-          (round / maxRounds) * 100,
-          { tapEventLog: tapLog.current, emptySpaceTapCount: emptySpaceTapCountRef.current }
-        );
-        onComplete({ score: round * 100, rounds: round, behavioralMetrics });
+        setMessage('You are a dance star! 🌟');
+        schedule(() => {
+          const behavioralMetrics = calculateBehavioralMetrics(
+            reactionTimesRef.current,
+            correctRoundsRef.current,
+            incorrectAttemptsRef.current,
+            (round / maxRounds) * 100,
+            { tapEventLog: tapLogRef.current, emptySpaceTapCount: emptySpaceTapCountRef.current }
+          );
+          onComplete({ score: round * 100, rounds: round, behavioralMetrics });
+        }, 1500);
       } else {
         setMessage('Great dancing! 🕺');
-        setTimeout(() => setRound(r => r + 1), 1000);
+        schedule(() => setRound(r => r + 1), 1500);
       }
     }
   };
@@ -114,10 +183,33 @@ export default function FollowLeader({ profile, onComplete }: Props) {
     if (now - lastElementTapTimeRef.current > 20) {
       const reactionTime = now - lastTapTimeRef.current;
       lastTapTimeRef.current = now;
-      tapLog.current.push({ timestamp: now, type: 'empty_space', reactionTime });
+      tapLogRef.current.push({ timestamp: now, type: 'empty_space', reactionTime });
       emptySpaceTapCountRef.current++;
     }
   };
+
+  if (!isGameStarted) {
+    return (
+      <View style={styles.startContainer}>
+        <Text style={styles.startTitle}>Follow the Leader</Text>
+        <View style={styles.startCard}>
+          <Text style={styles.startEmoji}>🕺</Text>
+          <Text style={styles.startBody}>
+            Watch Starry's moves and then copy them exactly! Ready to dance?
+          </Text>
+          <TouchableOpacity
+            style={styles.startBtn}
+            onPress={() => setIsGameStarted(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.startBtnText}>START DANCING! 🚀</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  const inputDisabled = isShowing || isTransitioning;
 
   return (
     <View style={styles.container}>
@@ -129,10 +221,30 @@ export default function FollowLeader({ profile, onComplete }: Props) {
       </View>
 
       <View style={styles.displayBox}>
+        {isShowing && (
+          <View style={styles.watchBanner}>
+            <Text style={styles.watchBannerText}>WATCH! 👀</Text>
+          </View>
+        )}
         <Text style={styles.displayIcon}>
           {activeAction !== null ? ACTIONS[activeAction].icon : '✨'}
         </Text>
         <Text style={styles.message}>{message}</Text>
+
+        {/* Progress dots during player's turn */}
+        {!isShowing && !isTransitioning && userSequence.length > 0 && (
+          <View style={styles.progressDots}>
+            {sequenceRef.current.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  i < userSequence.length ? styles.dotFilled : styles.dotEmpty,
+                ]}
+              />
+            ))}
+          </View>
+        )}
       </View>
 
       <Pressable style={styles.actionsWrapper} onPress={handleEmptySpaceTap}>
@@ -140,12 +252,12 @@ export default function FollowLeader({ profile, onComplete }: Props) {
           {ACTIONS.map((action, i) => (
             <TouchableOpacity
               key={i}
-              disabled={isShowing}
+              disabled={inputDisabled}
               onPress={() => handleAction(i)}
               style={[
                 styles.actionBtn,
                 { backgroundColor: action.bg, borderColor: action.border },
-                isShowing && styles.actionBtnDisabled,
+                inputDisabled && styles.actionBtnDisabled,
               ]}
               activeOpacity={0.85}
             >
@@ -160,6 +272,55 @@ export default function FollowLeader({ profile, onComplete }: Props) {
 }
 
 const styles = StyleSheet.create({
+  // ── Start screen ─────────────────────────────────────────────────────
+  startContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  startTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.blue,
+    marginBottom: 20,
+  },
+  startCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 36,
+    padding: 32,
+    alignItems: 'center',
+    gap: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 3,
+    borderColor: '#DBEAFE',
+  },
+  startEmoji: { fontSize: 80 },
+  startBody: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: COLORS.gray600,
+    textAlign: 'center',
+    lineHeight: 26,
+  },
+  startBtn: {
+    backgroundColor: COLORS.blue,
+    borderRadius: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    shadowColor: COLORS.blue,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  startBtnText: { color: COLORS.white, fontWeight: '900', fontSize: 18 },
+
+  // ── Game screen ───────────────────────────────────────────────────────
   container: { flex: 1 },
   header: { alignItems: 'center', marginBottom: 16 },
   title: { fontSize: 22, fontWeight: '900', color: COLORS.blue, marginBottom: 8 },
@@ -186,14 +347,34 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 4,
+    gap: 10,
   },
-  displayIcon: { fontSize: 72, marginBottom: 12 },
+  watchBanner: {
+    backgroundColor: '#FDE68A',
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  watchBannerText: { fontWeight: '900', fontSize: 14, color: '#92400E' },
+  displayIcon: { fontSize: 72 },
   message: {
     fontSize: 16,
     fontWeight: '800',
     color: COLORS.primary,
     textAlign: 'center',
   },
+  progressDots: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  dot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  dotFilled: { backgroundColor: COLORS.blue },
+  dotEmpty: { backgroundColor: '#DBEAFE' },
   actionsWrapper: {
     padding: 8,
     backgroundColor: COLORS.gray50,

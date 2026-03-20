@@ -10,7 +10,16 @@ import {
   TextInput,
   Modal,
 } from 'react-native';
-import Svg, { Circle, Line, Polygon, Text as SvgText } from 'react-native-svg';
+import Svg, {
+  Circle,
+  Line,
+  Polygon,
+  Path,
+  Text as SvgText,
+  Defs,
+  LinearGradient,
+  Stop,
+} from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -21,12 +30,170 @@ import { COLORS } from '../constants';
 
 type NavProp = StackNavigationProp<RootStackParamList, 'Results'>;
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const GAME_NAME_MAP: Record<string, string> = {
+  catcher: 'Reaction Catcher',
+  memory: 'Memory Match',
+  numbersequencer: 'Number Sequencer',
+  sound: 'Sound & Words',
+  leader: 'Follow the Leader',
+  counting: 'Counting Garden',
+  emotion: 'Emotion Detective',
+  simon: 'Simon Says',
+  maze: 'Treasure Maze',
+  category: 'Category Sort',
+};
+
+const RECOMMENDATIONS: Record<string, string[]> = {
+  green: [
+    'Encourage regular short play sessions',
+    'Try different game types to keep it fun',
+    'Celebrate every small achievement!',
+    'Keep screen time balanced and playful',
+  ],
+  amber: [
+    'Ensure a distraction-free environment',
+    'Observe attention levels during activities',
+    'Practice the challenging games more often',
+    'Reward effort, not just correct answers',
+  ],
+  red: [
+    'Follow up if performance remains inconsistent',
+    'Speak with your paediatrician about these results',
+    'Reduce distractions during play sessions',
+    'Keep a daily activity journal',
+  ],
+};
+
+const STATUS_MAP = {
+  green: { label: 'On Track', color: '#22c55e', bg: '#f0fdf4', border: '#86efac' },
+  amber: { label: 'Needs Attention', color: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
+  red: { label: 'Seek Support', color: '#ef4444', bg: '#fff1f2', border: '#fca5a5' },
+  none: { label: 'No Data Yet', color: '#94a3b8', bg: '#f8fafc', border: '#e2e8f0' },
+};
+
+const CHILD_AVATARS = ['🐣', '🦊', '🐼', '🦁', '🐸', '🐨', '🦄', '🐯'];
+
+function getChildAvatar(name: string): string {
+  const idx = name.charCodeAt(0) % CHILD_AVATARS.length;
+  return CHILD_AVATARS[idx] ?? '🐣';
+}
+
+function formatDate(ts: number): string {
+  return new Date(ts).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Parent Dashboard components (inline)
+// ---------------------------------------------------------------------------
+
+function StarRating({ score }: { score: number }) {
+  const stars = Math.round(Math.min(5, Math.max(0, score / 20)));
+  return (
+    <Text style={styles.starText}>
+      {Array.from({ length: 5 }, (_, i) => (i < stars ? '★' : '☆')).join('')}
+    </Text>
+  );
+}
+
+interface MiniLineChartProps {
+  data: number[]; // values 0-100
+}
+
+function MiniLineChart({ data }: MiniLineChartProps) {
+  if (data.length < 2) {
+    return (
+      <View style={styles.chartEmpty}>
+        <Text style={styles.chartEmptyText}>Play more games to see your progress chart!</Text>
+      </View>
+    );
+  }
+
+  const W = 320;
+  const H = 120;
+  const PAD = 16;
+  const chartW = W - PAD * 2;
+  const chartH = H - PAD * 2;
+
+  const maxVal = Math.max(...data, 1);
+  const points = data.map((v, i) => ({
+    x: PAD + (i / (data.length - 1)) * chartW,
+    y: PAD + (1 - v / maxVal) * chartH,
+  }));
+
+  // Build smooth path (polyline)
+  const linePath = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+    .join(' ');
+
+  // Build filled area path
+  const areaPath =
+    linePath +
+    ` L ${points[points.length - 1].x.toFixed(1)} ${(H - PAD).toFixed(1)}` +
+    ` L ${points[0].x.toFixed(1)} ${(H - PAD).toFixed(1)} Z`;
+
+  return (
+    <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
+      <Defs>
+        <LinearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#7C3AED" stopOpacity="0.35" />
+          <Stop offset="1" stopColor="#7C3AED" stopOpacity="0.0" />
+        </LinearGradient>
+      </Defs>
+      {/* Grid lines */}
+      {[0, 25, 50, 75, 100].map(v => {
+        const gy = PAD + (1 - v / maxVal) * chartH;
+        return (
+          <Line
+            key={v}
+            x1={PAD}
+            y1={gy}
+            x2={W - PAD}
+            y2={gy}
+            stroke="#e2e8f0"
+            strokeWidth="1"
+          />
+        );
+      })}
+      {/* Filled area */}
+      <Path d={areaPath} fill="url(#chartGrad)" />
+      {/* Line */}
+      <Path d={linePath} fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Dots */}
+      {points.map((p, i) => (
+        <Circle key={i} cx={p.x} cy={p.y} r={4} fill="#7C3AED" />
+      ))}
+    </Svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
 export default function ResultsScreen() {
   const navigation = useNavigation<NavProp>();
   const { child, role, results, resetApp, addObservation } = useApp();
   const [diaryOpen, setDiaryOpen] = useState(false);
   const [diaryInput, setDiaryInput] = useState('');
 
+  // ── Shared CECI calculation (used by both views) ────────────────────────
+  const {
+    score: apiCeciScore,
+    source: ceciSource,
+    loading: ceciLoading,
+  } = useCECICalculation(results, child.name || 'Child', child.age || 5, { autoCalculate: true });
+
+  const ceciScore = apiCeciScore || calculateCECI(results, child.name || 'Child');
+
+  // ── Doctor-view helpers (unchanged) ────────────────────────────────────
   const getCategoryScores = () => {
     const categories = {
       cognitive: { games: ['memory', 'numbersequencer', 'counting', 'maze'], total: 0, count: 0 },
@@ -61,16 +228,6 @@ export default function ResultsScreen() {
     results.length > 0
       ? Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / 4)
       : 0;
-
-  const {
-    score: apiCeciScore,
-    source: ceciSource,
-    loading: ceciLoading,
-    error: ceciError,
-    apiAvailable,
-  } = useCECICalculation(results, child.name || 'Child', child.age || 5, { autoCalculate: true });
-
-  const ceciScore = apiCeciScore || calculateCECI(results, child.name || 'Child');
 
   const riskColor =
     ceciScore.riskBand === 'green'
@@ -142,6 +299,290 @@ export default function ResultsScreen() {
     }
   };
 
+  // ── Parent view data derivation ─────────────────────────────────────────
+  const hasData = results.length > 0;
+  const statusKey: keyof typeof STATUS_MAP = hasData ? ceciScore.riskBand : 'none';
+  const status = STATUS_MAP[statusKey];
+
+  const lastSessionDate = hasData
+    ? formatDate(Math.max(...results.map(r => r.timestamp)))
+    : '—';
+  const totalSessions = results.length;
+  const gamesPlayed = new Set(results.map(r => r.gameId)).size;
+
+  // Development summary sentence
+  const devSummary = (() => {
+    if (!hasData) return `${child.name || 'Your child'} hasn't played any games yet. Tap "Play Games" below to get started!`;
+    if (ceciScore.riskBand === 'green')
+      return `${child.name || 'Your child'} is developing well across all areas. Keep up the great play sessions!`;
+    if (ceciScore.riskBand === 'amber')
+      return `${child.name || 'Your child'} is showing some variation in performance. A few focused sessions will help.`;
+    return `${child.name || 'Your child'} may benefit from additional support. Consider speaking with a specialist.`;
+  })();
+
+  // Behaviour insight derivations
+  const avgReactionMs = tapMetrics.length > 0
+    ? tapMetrics.reduce((s, m) => s + m.averageReactionTime, 0) / tapMetrics.length
+    : null;
+  const reactionLabel =
+    avgReactionMs === null ? 'No data'
+    : avgReactionMs < 600 ? 'Fast'
+    : avgReactionMs < 1200 ? 'Good'
+    : 'Developing';
+
+  const avgAccuracy = tapMetrics.length > 0
+    ? tapMetrics.reduce((s, m) => s + m.accuracy, 0) / tapMetrics.length
+    : null;
+  const accuracyLabel =
+    avgAccuracy === null ? 'No data'
+    : avgAccuracy >= 75 ? 'High'
+    : avgAccuracy >= 50 ? 'Good'
+    : 'Developing';
+
+  const avgEngagement = tapMetrics.length > 0
+    ? tapMetrics.reduce((s, m) => s + m.engagementScore, 0) / tapMetrics.length
+    : null;
+
+  const avgWSD = tapMetrics.length > 0
+    ? tapMetrics.reduce((s, m) => s + (m.withinSessionDegradation ?? 0), 0) / tapMetrics.length
+    : null;
+  const attentionLabel =
+    avgWSD === null ? 'No data'
+    : avgWSD < 0.2 ? 'Consistent'
+    : avgWSD < 0.45 ? 'Sometimes'
+    : 'Variable';
+
+  const engagementLabel =
+    avgEngagement === null ? 'No data'
+    : avgEngagement >= 70 ? 'Great'
+    : avgEngagement >= 45 ? 'Good'
+    : 'Could Be Higher';
+
+  // Progress chart data (accuracy per result, chronological)
+  const chartData = [...results]
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map(r => r.behavioralMetrics?.accuracy ?? Math.min(100, r.score));
+
+  // Recent session history (up to 10, newest first)
+  const sessionHistory = [...results]
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, 10);
+
+  const recs = RECOMMENDATIONS[ceciScore.riskBand] ?? RECOMMENDATIONS.green;
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  if (role === 'parent') {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+
+          {/* ── Header ── */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+              <Text style={styles.backBtnText}>⬅️</Text>
+            </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pageTitle}>My Child's Progress</Text>
+              <Text style={styles.pageSubtitle}>Parent Dashboard</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.updateBtn}
+              onPress={() => navigation.navigate('OnboardingChild')}
+            >
+              <Text style={styles.updateBtnText}>⚙️ Update</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── 1. Child Card ── */}
+          <View style={[styles.childCard, { backgroundColor: status.bg, borderColor: status.border }]}>
+            <Text style={styles.childAvatar}>{getChildAvatar(child.name || 'A')}</Text>
+            <View style={styles.childInfo}>
+              <Text style={styles.childName}>{child.name || 'Your Child'}</Text>
+              {child.age > 0 && (
+                <Text style={styles.childAge}>{child.age} years old</Text>
+              )}
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: status.color }]}>
+              <Text style={styles.statusBadgeText}>{status.label}</Text>
+            </View>
+          </View>
+
+          {/* ── 2. Stats Row ── */}
+          <View style={styles.statsRow}>
+            {[
+              { label: 'Last Session', value: lastSessionDate, icon: '📅' },
+              { label: 'Total Sessions', value: String(totalSessions), icon: '🎮' },
+              { label: 'Games Played', value: String(gamesPlayed), icon: '⭐' },
+            ].map((s, i) => (
+              <View key={i} style={styles.statPill}>
+                <Text style={styles.statPillIcon}>{s.icon}</Text>
+                <Text style={styles.statPillValue}>{s.value}</Text>
+                <Text style={styles.statPillLabel}>{s.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* ── 3. Development Status ── */}
+          <View style={styles.devCard}>
+            <Text style={styles.devCardTitle}>Development Status</Text>
+            <Text style={styles.devCardBody}>{devSummary}</Text>
+          </View>
+
+          {/* ── 4. Behaviour Insights ── */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Behaviour Insights</Text>
+            <View style={styles.insightsGrid}>
+              {[
+                { icon: '⚡', label: 'Reaction Speed', value: reactionLabel },
+                { icon: '🎯', label: 'Accuracy', value: accuracyLabel },
+                { icon: '⏳', label: 'Attention', value: attentionLabel },
+                { icon: '🎮', label: 'Engagement Level', value: engagementLabel },
+              ].map((insight, i) => (
+                <View key={i} style={styles.insightCard}>
+                  <Text style={styles.insightIcon}>{insight.icon}</Text>
+                  <Text style={styles.insightLabel}>{insight.label}</Text>
+                  <Text style={[
+                    styles.insightValue,
+                    {
+                      color: ['Fast', 'High', 'Consistent', 'Great'].includes(insight.value)
+                        ? '#22c55e'
+                        : ['Good', 'Sometimes'].includes(insight.value)
+                        ? '#f59e0b'
+                        : '#94a3b8',
+                    },
+                  ]}>
+                    {insight.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* ── 5. Progress Over Time ── */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Progress Over Time</Text>
+            <Text style={styles.sectionSubtitle}>Accuracy across recent games</Text>
+            <View style={styles.chartContainer}>
+              <MiniLineChart data={chartData} />
+            </View>
+          </View>
+
+          {/* ── 6. Session History ── */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Recent Games</Text>
+            {sessionHistory.length === 0 ? (
+              <Text style={styles.emptyText}>No games played yet.</Text>
+            ) : (
+              sessionHistory.map((r, i) => (
+                <View key={i} style={styles.sessionRow}>
+                  <View style={styles.sessionLeft}>
+                    <Text style={styles.sessionGame}>
+                      {GAME_NAME_MAP[r.gameId] ?? r.gameId}
+                    </Text>
+                    <Text style={styles.sessionDate}>{formatDate(r.timestamp)}</Text>
+                  </View>
+                  <StarRating score={r.score} />
+                </View>
+              ))
+            )}
+          </View>
+
+          {/* ── 7. Recommendations ── */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Tips For You</Text>
+            {recs.map((tip, i) => (
+              <View key={i} style={styles.tipRow}>
+                <View style={styles.tipBullet} />
+                <Text style={styles.tipText}>{tip}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* ── 8. Privacy & Safety ── */}
+          <View style={[styles.sectionCard, { backgroundColor: '#f0fdf4', borderColor: '#86efac' }]}>
+            <Text style={[styles.sectionTitle, { color: '#15803d' }]}>Privacy & Safety</Text>
+            {['Data is securely stored.', 'No data shared without your permission.'].map((line, i) => (
+              <View key={i} style={styles.checkRow}>
+                <Text style={styles.checkMark}>✓</Text>
+                <Text style={styles.checkText}>{line}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* ── 9. Play Games Button ── */}
+          <TouchableOpacity
+            style={styles.playGamesBtn}
+            onPress={() => navigation.navigate('Assessment')}
+          >
+            <Text style={styles.playGamesBtnText}>🎮  Play Games</Text>
+          </TouchableOpacity>
+
+          {/* Log Out */}
+          <TouchableOpacity
+            style={styles.logoutBtn}
+            onPress={() => { resetApp(); navigation.navigate('Welcome'); }}
+          >
+            <Text style={styles.logoutBtnText}>Log Out</Text>
+          </TouchableOpacity>
+
+        </ScrollView>
+
+        {/* Parent Diary FAB */}
+        <TouchableOpacity style={styles.fab} onPress={() => setDiaryOpen(true)}>
+          <Text style={styles.fabIcon}>📒</Text>
+        </TouchableOpacity>
+
+        {/* Diary Modal */}
+        <Modal visible={diaryOpen} animationType="slide" transparent onRequestClose={() => setDiaryOpen(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>Parent's Diary 📒</Text>
+                  <Text style={styles.modalSubtitle}>Notes about {child.name || 'Child'}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setDiaryOpen(false)}>
+                  <Text style={styles.modalClose}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                {child.observations.length === 0 ? (
+                  <Text style={styles.diaryEmpty}>
+                    No notes yet. Write down what you notice about {child.name || 'your child'} today...
+                  </Text>
+                ) : (
+                  child.observations.map(obs => (
+                    <View key={obs.id} style={styles.diaryEntry}>
+                      <Text style={styles.diaryDate}>
+                        {new Date(obs.timestamp).toLocaleDateString()} @{' '}
+                        {new Date(obs.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                      <Text style={styles.diaryText}>{obs.text}</Text>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+              <View style={styles.modalFooter}>
+                <TextInput
+                  style={styles.diaryInput}
+                  value={diaryInput}
+                  onChangeText={setDiaryInput}
+                  placeholder="Type a new observation..."
+                  placeholderTextColor={COLORS.gray400}
+                  multiline
+                />
+                <TouchableOpacity style={styles.writeBtn} onPress={handleAddDiaryEntry}>
+                  <Text style={styles.writeBtnText}>WRITE ✍️</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Doctor view (completely unchanged) ─────────────────────────────────
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -153,19 +594,9 @@ export default function ResultsScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.pageTitle}>Development Report</Text>
             <Text style={styles.pageSubtitle}>
-              {role === 'doctor'
-                ? `Analyzing: ${child.name || 'Anonymous'}`
-                : `Tracking ${child.name || 'your child'}'s progress`}
+              {`Analyzing: ${child.name || 'Anonymous'}`}
             </Text>
           </View>
-          {role === 'parent' && (
-            <TouchableOpacity
-              style={styles.updateBtn}
-              onPress={() => navigation.navigate('OnboardingChild')}
-            >
-              <Text style={styles.updateBtnText}>⚙️ Update</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         {/* Stats Row */}
@@ -405,54 +836,38 @@ export default function ResultsScreen() {
           ))}
         </View>
 
-        {/* Doctor Notes / Parent Tip */}
-        {role === 'doctor' ? (
-          <View style={styles.doctorCard}>
-            <Text style={styles.doctorTitle}>Doctor's Clinical Notes</Text>
-            <Text style={styles.doctorMeta}>
-              {child.bloodGroup || 'Unknown BG'} • BMI {child.bmi} • Age {child.age}
-            </Text>
-            <TextInput
-              style={styles.doctorInput}
-              multiline
-              numberOfLines={4}
-              placeholder="Type clinical findings..."
-              placeholderTextColor={COLORS.gray400}
-            />
-            <TouchableOpacity style={styles.submitBtn}>
-              <Text style={styles.submitBtnText}>Submit Official Assessment</Text>
-            </TouchableOpacity>
+        {/* Doctor Notes */}
+        <View style={styles.doctorCard}>
+          <Text style={styles.doctorTitle}>Doctor's Clinical Notes</Text>
+          <Text style={styles.doctorMeta}>
+            {child.bloodGroup || 'Unknown BG'} • BMI {child.bmi} • Age {child.age}
+          </Text>
+          <TextInput
+            style={styles.doctorInput}
+            multiline
+            numberOfLines={4}
+            placeholder="Type clinical findings..."
+            placeholderTextColor={COLORS.gray400}
+          />
+          <TouchableOpacity style={styles.submitBtn}>
+            <Text style={styles.submitBtnText}>Submit Official Assessment</Text>
+          </TouchableOpacity>
 
-            {/* Diary View for Doctor */}
-            <View style={styles.diarySection}>
-              <Text style={styles.diaryTitle}>📒 Parent Observations Diary</Text>
-              {child.observations.length === 0 ? (
-                <Text style={styles.diaryEmpty}>No diary notes added yet.</Text>
-              ) : (
-                child.observations.map(obs => (
-                  <View key={obs.id} style={styles.diaryEntry}>
-                    <Text style={styles.diaryDate}>{new Date(obs.timestamp).toLocaleDateString()}</Text>
-                    <Text style={styles.diaryText}>{obs.text}</Text>
-                  </View>
-                ))
-              )}
-            </View>
+          {/* Diary View for Doctor */}
+          <View style={styles.diarySection}>
+            <Text style={styles.diaryTitle}>📒 Parent Observations Diary</Text>
+            {child.observations.length === 0 ? (
+              <Text style={styles.diaryEmpty}>No diary notes added yet.</Text>
+            ) : (
+              child.observations.map(obs => (
+                <View key={obs.id} style={styles.diaryEntry}>
+                  <Text style={styles.diaryDate}>{new Date(obs.timestamp).toLocaleDateString()}</Text>
+                  <Text style={styles.diaryText}>{obs.text}</Text>
+                </View>
+              ))
+            )}
           </View>
-        ) : (
-          <View style={styles.tipCard}>
-            <Text style={styles.tipTitle}>Daily Growth Tip 💡</Text>
-            <Text style={styles.tipBody}>
-              "Based on the results, focused language activities like reading together would be very
-              beneficial for {child.name || 'your child'} this week!"
-            </Text>
-            <TouchableOpacity
-              style={styles.playBtn}
-              onPress={() => navigation.navigate('Assessment')}
-            >
-              <Text style={styles.playBtnText}>Play Discovery Games</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        </View>
 
         {/* Log Out */}
         <TouchableOpacity
@@ -462,68 +877,19 @@ export default function ResultsScreen() {
           <Text style={styles.logoutBtnText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* Parent Diary FAB */}
-      {role === 'parent' && (
-        <TouchableOpacity style={styles.fab} onPress={() => setDiaryOpen(true)}>
-          <Text style={styles.fabIcon}>📒</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Diary Modal */}
-      <Modal visible={diaryOpen} animationType="slide" transparent onRequestClose={() => setDiaryOpen(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Parent's Diary 📒</Text>
-                <Text style={styles.modalSubtitle}>Notes about {child.name || 'Child'}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setDiaryOpen(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              {child.observations.length === 0 ? (
-                <Text style={styles.diaryEmpty}>
-                  No notes yet. Write down what you notice about {child.name || 'your child'} today...
-                </Text>
-              ) : (
-                child.observations.map(obs => (
-                  <View key={obs.id} style={styles.diaryEntry}>
-                    <Text style={styles.diaryDate}>
-                      {new Date(obs.timestamp).toLocaleDateString()} @ {new Date(obs.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                    <Text style={styles.diaryText}>{obs.text}</Text>
-                  </View>
-                ))
-              )}
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TextInput
-                style={styles.diaryInput}
-                value={diaryInput}
-                onChangeText={setDiaryInput}
-                placeholder="Type a new observation..."
-                placeholderTextColor={COLORS.gray400}
-                multiline
-              />
-              <TouchableOpacity style={styles.writeBtn} onPress={handleAddDiaryEntry}>
-                <Text style={styles.writeBtnText}>WRITE ✍️</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   container: { flexGrow: 1, paddingHorizontal: 20, paddingVertical: 24 },
+
+  // ── Shared header ──────────────────────────────────────────────────────
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -553,6 +919,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   updateBtnText: { color: COLORS.white, fontWeight: '800', fontSize: 13 },
+
+  // ── Doctor stats scroll ────────────────────────────────────────────────
   statsScroll: { marginBottom: 20 },
   statCard: {
     backgroundColor: COLORS.white,
@@ -580,6 +948,281 @@ const styles = StyleSheet.create({
   statIcon: { fontSize: 22 },
   statLabel: { fontSize: 10, fontWeight: '900', color: COLORS.gray400, letterSpacing: 0.5, marginBottom: 2 },
   statValue: { fontSize: 16, fontWeight: '900' },
+
+  // ── Parent: child card ─────────────────────────────────────────────────
+  childCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 28,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 3,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  childAvatar: { fontSize: 52 },
+  childInfo: { flex: 1 },
+  childName: { fontSize: 22, fontWeight: '900', color: COLORS.gray700 },
+  childAge: { fontSize: 14, fontWeight: '600', color: COLORS.gray500, marginTop: 2 },
+  statusBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  statusBadgeText: { color: COLORS.white, fontWeight: '900', fontSize: 13 },
+
+  // ── Parent: stats row ──────────────────────────────────────────────────
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  statPill: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.purple100,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  statPillIcon: { fontSize: 20, marginBottom: 4 },
+  statPillValue: { fontSize: 16, fontWeight: '900', color: COLORS.primary },
+  statPillLabel: { fontSize: 10, fontWeight: '700', color: COLORS.gray400, textAlign: 'center', marginTop: 2 },
+
+  // ── Parent: development card ───────────────────────────────────────────
+  devCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: COLORS.purple100,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  devCardTitle: { fontSize: 17, fontWeight: '900', color: COLORS.primary, marginBottom: 8 },
+  devCardBody: { fontSize: 15, fontWeight: '600', color: COLORS.gray600, lineHeight: 24 },
+
+  // ── Parent: section card (generic) ────────────────────────────────────
+  sectionCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: COLORS.purple100,
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  sectionTitle: { fontSize: 17, fontWeight: '900', color: COLORS.primary, marginBottom: 4 },
+  sectionSubtitle: { fontSize: 12, fontWeight: '600', color: COLORS.gray400, marginBottom: 12 },
+  emptyText: { fontSize: 14, color: COLORS.gray400, fontWeight: '600', fontStyle: 'italic' },
+
+  // ── Parent: insights grid ──────────────────────────────────────────────
+  insightsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 8,
+  },
+  insightCard: {
+    width: '47%',
+    backgroundColor: COLORS.gray50,
+    borderRadius: 18,
+    padding: 14,
+    alignItems: 'center',
+    gap: 4,
+  },
+  insightIcon: { fontSize: 28 },
+  insightLabel: { fontSize: 12, fontWeight: '700', color: COLORS.gray500, textAlign: 'center' },
+  insightValue: { fontSize: 16, fontWeight: '900' },
+
+  // ── Parent: chart ──────────────────────────────────────────────────────
+  chartContainer: { alignItems: 'center', marginTop: 4 },
+  chartEmpty: {
+    paddingVertical: 30,
+    alignItems: 'center',
+  },
+  chartEmptyText: { fontSize: 13, color: COLORS.gray400, fontWeight: '600', textAlign: 'center' },
+
+  // ── Parent: session history ────────────────────────────────────────────
+  sessionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray100,
+  },
+  sessionLeft: { flex: 1 },
+  sessionGame: { fontSize: 14, fontWeight: '800', color: COLORS.gray700 },
+  sessionDate: { fontSize: 11, fontWeight: '600', color: COLORS.gray400, marginTop: 2 },
+  starText: { fontSize: 18, color: '#f59e0b', letterSpacing: 2 },
+
+  // ── Parent: tips ──────────────────────────────────────────────────────
+  tipRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 10,
+  },
+  tipBullet: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
+    marginTop: 6,
+  },
+  tipText: { flex: 1, fontSize: 14, fontWeight: '600', color: COLORS.gray600, lineHeight: 22 },
+
+  // ── Parent: privacy ────────────────────────────────────────────────────
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 10,
+  },
+  checkMark: { fontSize: 18, color: '#22c55e', fontWeight: '900' },
+  checkText: { fontSize: 14, fontWeight: '600', color: '#15803d' },
+
+  // ── Parent: play button ────────────────────────────────────────────────
+  playGamesBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 28,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginBottom: 14,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  playGamesBtnText: { color: COLORS.white, fontSize: 18, fontWeight: '900' },
+
+  // ── Shared logout ─────────────────────────────────────────────────────
+  logoutBtn: {
+    backgroundColor: COLORS.gray100,
+    borderRadius: 24,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  logoutBtnText: { color: COLORS.gray500, fontSize: 16, fontWeight: '800' },
+
+  // ── FAB ───────────────────────────────────────────────────────────────
+  fab: {
+    position: 'absolute',
+    bottom: 32,
+    right: 24,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: COLORS.orange,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.orange,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  fabIcon: { fontSize: 32 },
+
+  // ── Diary modal ───────────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(88,28,135,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: '#FDFDFD',
+    borderRadius: 28,
+    width: '100%',
+    maxHeight: '80%',
+    borderLeftWidth: 10,
+    borderLeftColor: COLORS.orange,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: 24,
+    borderBottomWidth: 2,
+    borderBottomColor: '#FEE2E2',
+  },
+  modalTitle: { fontSize: 22, fontWeight: '900', color: COLORS.primary },
+  modalSubtitle: { fontSize: 11, color: COLORS.gray400, fontWeight: '800', letterSpacing: 1, marginTop: 2 },
+  modalClose: { fontSize: 24, color: COLORS.gray400 },
+  modalBody: { padding: 24, maxHeight: 300 },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 16,
+    backgroundColor: COLORS.gray50,
+    borderTopWidth: 2,
+    borderTopColor: '#FFF1F2',
+  },
+  diarySection: { marginTop: 8 },
+  diaryTitle: { fontSize: 18, fontWeight: '900', color: COLORS.primary, marginBottom: 12 },
+  diaryEmpty: { color: COLORS.gray400, fontWeight: '600', fontStyle: 'italic' },
+  diaryEntry: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.orange,
+  },
+  diaryDate: { fontSize: 10, color: COLORS.primaryLight, fontWeight: '900', marginBottom: 6 },
+  diaryText: { fontSize: 14, color: COLORS.gray700, fontWeight: '600', lineHeight: 22 },
+  diaryInput: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.gray700,
+    borderWidth: 2,
+    borderColor: COLORS.gray200,
+    minHeight: 48,
+  },
+  writeBtn: {
+    backgroundColor: COLORS.orange,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.orange,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  writeBtnText: { color: COLORS.white, fontWeight: '900', fontSize: 14 },
+
+  // ── Doctor: CECI card ──────────────────────────────────────────────────
   ceciCard: {
     borderRadius: 36,
     padding: 24,
@@ -647,6 +1290,8 @@ const styles = StyleSheet.create({
   tapStat: { alignItems: 'center' },
   tapStatNum: { fontSize: 20, fontWeight: '900', color: COLORS.primary },
   tapStatLabel: { fontSize: 10, fontWeight: '700', color: COLORS.gray400, marginTop: 2 },
+
+  // ── Doctor: radar chart ────────────────────────────────────────────────
   radarCard: {
     backgroundColor: COLORS.white,
     borderRadius: 36,
@@ -663,6 +1308,8 @@ const styles = StyleSheet.create({
   },
   radarTitle: { fontSize: 20, fontWeight: '900', color: COLORS.primary, marginBottom: 20 },
   radarContainer: { alignItems: 'center' },
+
+  // ── Doctor: summary metrics ────────────────────────────────────────────
   metricsCard: {
     backgroundColor: COLORS.white,
     borderRadius: 32,
@@ -683,6 +1330,8 @@ const styles = StyleSheet.create({
   metricScore: { fontSize: 20, fontWeight: '900' },
   metricBarBg: { height: 14, backgroundColor: COLORS.gray100, borderRadius: 7, overflow: 'hidden' },
   metricBarFill: { height: 14, borderRadius: 7 },
+
+  // ── Doctor: notes ──────────────────────────────────────────────────────
   doctorCard: {
     backgroundColor: '#EFF6FF',
     borderRadius: 32,
@@ -714,126 +1363,4 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   submitBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '900' },
-  diarySection: { marginTop: 8 },
-  diaryTitle: { fontSize: 18, fontWeight: '900', color: COLORS.primary, marginBottom: 12 },
-  diaryEmpty: { color: COLORS.gray400, fontWeight: '600', fontStyle: 'italic' },
-  diaryEntry: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.orange,
-  },
-  diaryDate: { fontSize: 10, color: COLORS.primaryLight, fontWeight: '900', marginBottom: 6 },
-  diaryText: { fontSize: 14, color: COLORS.gray700, fontWeight: '600', lineHeight: 22 },
-  tipCard: {
-    backgroundColor: '#FFF7ED',
-    borderRadius: 32,
-    padding: 24,
-    marginBottom: 20,
-    borderWidth: 3,
-    borderColor: '#FED7AA',
-  },
-  tipTitle: { fontSize: 20, fontWeight: '900', color: COLORS.orange, marginBottom: 12 },
-  tipBody: { fontSize: 15, color: COLORS.gray600, fontWeight: '600', lineHeight: 24, marginBottom: 20 },
-  playBtn: {
-    backgroundColor: COLORS.orange,
-    borderRadius: 24,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: COLORS.orange,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  playBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '900' },
-  logoutBtn: {
-    backgroundColor: COLORS.gray100,
-    borderRadius: 24,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  logoutBtnText: { color: COLORS.gray500, fontSize: 16, fontWeight: '800' },
-  fab: {
-    position: 'absolute',
-    bottom: 32,
-    right: 24,
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: COLORS.orange,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: COLORS.orange,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  fabIcon: { fontSize: 32 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(88,28,135,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalCard: {
-    backgroundColor: '#FDFDFD',
-    borderRadius: 28,
-    width: '100%',
-    maxHeight: '80%',
-    borderLeftWidth: 10,
-    borderLeftColor: COLORS.orange,
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: 24,
-    borderBottomWidth: 2,
-    borderBottomColor: '#FEE2E2',
-  },
-  modalTitle: { fontSize: 22, fontWeight: '900', color: COLORS.primary },
-  modalSubtitle: { fontSize: 11, color: COLORS.gray400, fontWeight: '800', letterSpacing: 1, marginTop: 2 },
-  modalClose: { fontSize: 24, color: COLORS.gray400 },
-  modalBody: { padding: 24, maxHeight: 300 },
-  modalFooter: {
-    flexDirection: 'row',
-    gap: 10,
-    padding: 16,
-    backgroundColor: COLORS.gray50,
-    borderTopWidth: 2,
-    borderTopColor: '#FFF1F2',
-  },
-  diaryInput: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.gray700,
-    borderWidth: 2,
-    borderColor: COLORS.gray200,
-    minHeight: 48,
-  },
-  writeBtn: {
-    backgroundColor: COLORS.orange,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: COLORS.orange,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  writeBtnText: { color: COLORS.white, fontWeight: '900', fontSize: 14 },
 });
