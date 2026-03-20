@@ -1,84 +1,95 @@
 {
   "classifier": {
-    "accuracy": 1.0,
-    "cv_accuracy_mean": 1.0,
-    "cv_accuracy_std": 0.0,
+    "accuracy": 0.9027932960893855,
+    "cv_accuracy_mean": 0.8318435754189946,
+    "cv_accuracy_std": 0.010947440191209721,
+    "cv_scores_per_fold": [
+      0.835195530726257,
+      0.835195530726257,
+      0.8463687150837989,
+      0.8296089385474861,
+      0.8128491620111732
+    ],
     "classification_report": {
       "green": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 200.0
+        "precision": 0.8003003003003003,
+        "recall": 0.9517857142857142,
+        "f1-score": 0.8694942903752039,
+        "support": 560.0
       },
       "amber": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 200.0
+        "precision": 0.9958847736625515,
+        "recall": 0.9490196078431372,
+        "f1-score": 0.9718875502008032,
+        "support": 255.0
       },
       "red": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 200.0
+        "precision": 0.9545970488081725,
+        "recall": 0.8625641025641025,
+        "f1-score": 0.90625,
+        "support": 975.0
       },
-      "accuracy": 1.0,
+      "accuracy": 0.9027932960893855,
       "macro avg": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 600.0
+        "precision": 0.9169273742570082,
+        "recall": 0.9211231415643181,
+        "f1-score": 0.9158772801920024,
+        "support": 1790.0
       },
       "weighted avg": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 600.0
+        "precision": 0.9122072111955793,
+        "recall": 0.9027932960893855,
+        "f1-score": 0.9041016077716866,
+        "support": 1790.0
       }
     },
     "confusion_matrix": [
       [
-        200,
+        533,
         0,
-        0
+        27
       ],
       [
         0,
-        200,
-        0
+        242,
+        13
       ],
       [
-        0,
-        0,
-        200
+        133,
+        1,
+        841
       ]
     ],
     "feature_importance": {
-      "avg_accuracy": 0.2509964161634713,
-      "avg_reaction_time": 0.1327710216219404,
-      "avg_hesitation": 0.2792806816680913,
-      "avg_engagement": 0.20292959972525382,
-      "accuracy_std": 0.029259328843265694,
-      "rt_variability": 0.10234558918777395,
-      "session_count": 0.0002052853971460943,
-      "num_games": 0.0,
-      "age": 0.002212077393057468
+      "avg_accuracy": 0.15416609932822062,
+      "avg_reaction_time": 0.04596763565444394,
+      "avg_hesitation": 0.2557739523324822,
+      "avg_engagement": 0.1927171554481478,
+      "accuracy_std": 0.11195454108241785,
+      "rt_variability": 0.19016462147337532,
+      "session_count": 0.034936975915432975,
+      "num_games": 0.007172562433121195,
+      "age": 0.007146456332358022
     }
   },
   "regressor": {
-    "mae": 0.0024494107539562737,
-    "mse": 1.8328111812312052e-05,
-    "rmse": 0.004281134407176684,
-    "r2": 0.9999999846978214,
-    "cv_r2_mean": 0.9990239282530583,
-    "cv_r2_std": 0.001185592964748849
+    "r2_train": 0.9345729799895921,
+    "mae_train": 5.0226148550613665,
+    "cv_r2_mean": 0.11283619123338991,
+    "cv_r2_std": 0.45361362099422314
   },
   "dataset_info": {
-    "total_samples": 600,
-    "class_distribution": {
-      "0": 200,
-      "1": 200,
-      "2": 200
+    "total_samples": 1790,
+    "source_breakdown": {
+      "synthetic": 600,
+      "flamenco_asd": 451,
+      "flamenco_intellectual": 451,
+      "uci_asd_child": 288
+    },
+    "risk_distribution": {
+      "0": 560,
+      "1": 255,
+      "2": 975
     },
     "feature_columns": [
       "avg_accuracy",
@@ -90,6 +101,13 @@
       "session_count",
       "num_games",
       "age"
+    ],
+    "datasets_used": [
+      "synthetic_ceci_600",
+      "uci_asd_child_id419",
+      "flamenco_zenodo_10492892_asd",
+      "flamenco_zenodo_10492892_intellectual"
     ]
-  }
+  },
+  "latency_ms": 34.740253910999854
 }

@@ -11,11 +11,32 @@ import html2canvas from 'html2canvas';
 
 const SESSION_STORAGE_KEY = 'ceci_sessions';
 
+// ── Validation helpers ────────────────────────────────────────────────────
+const isValidEmail = (email: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+const isValidName = (name: string) =>
+  name.trim().length >= 2 && /[a-zA-Z]/.test(name);
+
 const App: React.FC = () => {
   const [section, setSection] = useState<Section>('welcome');
   const [history, setHistory] = useState<Section[]>([]);
   const [role, setRole] = useState<UserRole | null>(null);
   const [isDiaryOpen, setIsDiaryOpen] = useState(false);
+
+  // ── Parent auth state ─────────────────────────────────────────────────
+  const [parentPassword, setParentPassword] = useState('');
+  const [parentErrors, setParentErrors] = useState<{
+    name?: string; email?: string; password?: string;
+  }>({});
+  const [showReAuthModal, setShowReAuthModal] = useState(false);
+  const [reAuthInput, setReAuthInput]         = useState('');
+  const [reAuthError, setReAuthError]         = useState('');
+
+  // ── Child form validation errors ──────────────────────────────────────
+  const [childErrors, setChildErrors] = useState<{
+    name?: string; dob?: string; gestationalAge?: string;
+  }>({});
 
   const [parent, setParent] = useState<ParentProfile>({
     name: '',
@@ -337,7 +358,16 @@ const App: React.FC = () => {
           </div>
         );
 
-      case 'onboarding-parent':
+      case 'onboarding-parent': {
+        const validateAndContinue = () => {
+          const errs: typeof parentErrors = {};
+          if (!isValidName(parent.name))   errs.name     = 'Please enter your full name (at least 2 letters).';
+          if (!isValidEmail(parent.email)) errs.email    = 'Please enter a valid email address.';
+          if (!parentPassword)             errs.password = 'Please create a password to protect this profile.';
+          else if (parentPassword.length < 4) errs.password = 'Password must be at least 4 characters.';
+          setParentErrors(errs);
+          if (Object.keys(errs).length === 0) navigateTo('onboarding-child');
+        };
         return (
           <div className="max-w-xl mx-auto py-20 px-4 animate-pop-in">
             <div className="bg-white p-12 rounded-[4rem] kids-shadow border-4 border-purple-100 relative overflow-hidden">
@@ -345,20 +375,67 @@ const App: React.FC = () => {
               <h2 className="text-4xl font-black text-purple-600 mb-10 text-center">Hello, Parent! 👋</h2>
               <div className="space-y-8">
                 <div>
-                  <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Your Full Name</label>
-                  <input type="text" className="w-full p-6 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl" value={parent.name} onChange={e => setParent({...parent, name: e.target.value})} placeholder="Super Parent Name" />
+                  <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Your Full Name *</label>
+                  <input
+                    type="text"
+                    className={`w-full p-6 rounded-[2rem] bg-gray-50 border-4 outline-none text-gray-900 font-bold text-xl ${parentErrors.name ? 'border-red-400 focus:border-red-400' : 'border-transparent focus:border-purple-200'}`}
+                    value={parent.name}
+                    onChange={e => { setParent({...parent, name: e.target.value}); setParentErrors(pe => ({...pe, name: undefined})); }}
+                    placeholder="Super Parent Name"
+                  />
+                  {parentErrors.name && <p className="text-red-500 text-sm font-bold mt-2 ml-2">⚠ {parentErrors.name}</p>}
                 </div>
                 <div>
-                  <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Email Address</label>
-                  <input type="email" className="w-full p-6 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-xl" value={parent.email} onChange={e => setParent({...parent, email: e.target.value})} placeholder="you@email.com" />
+                  <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Email Address *</label>
+                  <input
+                    type="email"
+                    className={`w-full p-6 rounded-[2rem] bg-gray-50 border-4 outline-none text-gray-900 font-bold text-xl ${parentErrors.email ? 'border-red-400 focus:border-red-400' : 'border-transparent focus:border-purple-200'}`}
+                    value={parent.email}
+                    onChange={e => { setParent({...parent, email: e.target.value}); setParentErrors(pe => ({...pe, email: undefined})); }}
+                    placeholder="you@email.com"
+                  />
+                  {parentErrors.email && <p className="text-red-500 text-sm font-bold mt-2 ml-2">⚠ {parentErrors.email}</p>}
                 </div>
-                <button disabled={!parent.name || !parent.email} onClick={() => navigateTo('onboarding-child')} className="w-full bg-[#FF9F1C] text-white py-6 rounded-[2.5rem] font-black text-2xl hover:scale-105 transition-all kids-button-shadow uppercase">Continue to Child Setup ➜</button>
+                <div>
+                  <label className="block text-gray-500 font-black mb-3 ml-2 text-sm uppercase">Create a Password *</label>
+                  <input
+                    type="password"
+                    className={`w-full p-6 rounded-[2rem] bg-gray-50 border-4 outline-none text-gray-900 font-bold text-xl ${parentErrors.password ? 'border-red-400 focus:border-red-400' : 'border-transparent focus:border-purple-200'}`}
+                    value={parentPassword}
+                    onChange={e => { setParentPassword(e.target.value); setParentErrors(pe => ({...pe, password: undefined})); }}
+                    placeholder="Min. 4 characters"
+                  />
+                  {parentErrors.password && <p className="text-red-500 text-sm font-bold mt-2 ml-2">⚠ {parentErrors.password}</p>}
+                  <p className="text-slate-400 text-xs font-bold mt-2 ml-2">Used to verify your identity when updating the child profile.</p>
+                </div>
+                <button
+                  onClick={validateAndContinue}
+                  className="w-full bg-[#FF9F1C] text-white py-6 rounded-[2.5rem] font-black text-2xl hover:scale-105 transition-all kids-button-shadow uppercase"
+                >
+                  Continue to Child Setup ➜
+                </button>
               </div>
             </div>
           </div>
         );
+      }
 
-      case 'onboarding-child':
+      case 'onboarding-child': {
+        const validateChildAndContinue = () => {
+          const errs: typeof childErrors = {};
+          if (!isValidName(child.name)) errs.name = 'Please enter the child\'s name (at least 2 letters).';
+          if (!child.dob) {
+            errs.dob = 'Date of birth is required.';
+          } else {
+            const today = new Date(); today.setHours(0,0,0,0);
+            const dob   = new Date(child.dob);
+            if (dob > today) errs.dob = 'Date of birth cannot be in the future.';
+          }
+          if (child.isPremature && (child.gestationalAgeWeeks < 22 || child.gestationalAgeWeeks > 36))
+            errs.gestationalAge = 'Gestational age must be between 22 and 36 weeks.';
+          setChildErrors(errs);
+          if (Object.keys(errs).length === 0) navigateTo('results');
+        };
         return (
           <div className="max-w-3xl mx-auto py-10 px-4 animate-pop-in">
             <div className="bg-white p-10 rounded-[4rem] kids-shadow border-4 border-purple-100 relative overflow-hidden">
@@ -371,14 +448,29 @@ const App: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
                   <label className="block text-gray-500 font-black mb-2 ml-2 text-xs uppercase">Child's Name *</label>
-                  <input type="text" className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-lg" value={child.name} onChange={e => setChild({...child, name: e.target.value})} placeholder="Enter name" />
+                  <input
+                    type="text"
+                    className={`w-full p-5 rounded-[2rem] bg-gray-50 border-4 outline-none text-gray-900 font-bold text-lg ${childErrors.name ? 'border-red-400 focus:border-red-400' : 'border-transparent focus:border-purple-200'}`}
+                    value={child.name}
+                    onChange={e => { setChild({...child, name: e.target.value}); setChildErrors(ce => ({...ce, name: undefined})); }}
+                    placeholder="Enter name"
+                  />
+                  {childErrors.name && <p className="text-red-500 text-xs font-bold mt-1 ml-2">⚠ {childErrors.name}</p>}
                 </div>
                 <div>
                   <label className="block text-gray-500 font-black mb-2 ml-2 text-xs uppercase">Date of Birth *</label>
-                  <input type="date" className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-lg" value={child.dob} onChange={e => {
-                    const age = calculateAge(e.target.value);
-                    setChild({...child, dob: e.target.value, age});
-                  }} />
+                  <input
+                    type="date"
+                    max={new Date().toISOString().split('T')[0]}
+                    className={`w-full p-5 rounded-[2rem] bg-gray-50 border-4 outline-none text-gray-900 font-bold text-lg ${childErrors.dob ? 'border-red-400 focus:border-red-400' : 'border-transparent focus:border-purple-200'}`}
+                    value={child.dob}
+                    onChange={e => {
+                      const age = calculateAge(e.target.value);
+                      setChild({...child, dob: e.target.value, age});
+                      setChildErrors(ce => ({...ce, dob: undefined}));
+                    }}
+                  />
+                  {childErrors.dob && <p className="text-red-500 text-xs font-bold mt-1 ml-2">⚠ {childErrors.dob}</p>}
                 </div>
 
                 {/* Sex/Gender — essential for sex-stratified normative scoring */}
@@ -434,16 +526,22 @@ const App: React.FC = () => {
                   </div>
                   {child.isPremature && (
                     <div className="mt-5">
-                      <label className="block text-gray-500 font-black mb-2 text-xs uppercase">Gestational Age at Birth (weeks)</label>
+                      <label className="block text-gray-500 font-black mb-2 text-xs uppercase">Gestational Age at Birth (weeks) *</label>
                       <input
                         type="number"
                         min="22" max="36"
-                        className="w-full p-4 rounded-[1.5rem] bg-white border-4 border-orange-200 focus:border-orange-400 outline-none text-gray-900 font-bold text-lg"
+                        className={`w-full p-4 rounded-[1.5rem] bg-white border-4 outline-none text-gray-900 font-bold text-lg ${childErrors.gestationalAge ? 'border-red-400 focus:border-red-400' : 'border-orange-200 focus:border-orange-400'}`}
                         value={child.gestationalAgeWeeks || ''}
-                        onChange={e => setChild({...child, gestationalAgeWeeks: parseInt(e.target.value) || 0})}
+                        onChange={e => {
+                          setChild({...child, gestationalAgeWeeks: parseInt(e.target.value) || 0});
+                          setChildErrors(ce => ({...ce, gestationalAge: undefined}));
+                        }}
                         placeholder="e.g. 32"
                       />
-                      <p className="text-orange-500 text-xs font-bold mt-2 ml-2">Used to compute the child's corrected developmental age for accurate scoring.</p>
+                      {childErrors.gestationalAge
+                        ? <p className="text-red-500 text-xs font-bold mt-2 ml-2">⚠ {childErrors.gestationalAge}</p>
+                        : <p className="text-orange-500 text-xs font-bold mt-2 ml-2">Used to compute the child's corrected developmental age for accurate scoring.</p>
+                      }
                     </div>
                   )}
                 </div>
@@ -502,9 +600,8 @@ const App: React.FC = () => {
               </div>
 
               <button
-                disabled={!child.name || !child.dob || !child.sex}
-                onClick={() => navigateTo('results')}
-                className="w-full mt-4 bg-purple-600 text-white py-7 rounded-[2.5rem] font-black text-2xl hover:scale-105 transition-all kids-button-shadow uppercase disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                onClick={validateChildAndContinue}
+                className="w-full mt-4 bg-purple-600 text-white py-7 rounded-[2.5rem] font-black text-2xl hover:scale-105 transition-all kids-button-shadow uppercase"
               >
                 Save & View Report ➜
               </button>
@@ -512,6 +609,7 @@ const App: React.FC = () => {
             </div>
           </div>
         );
+      }
 
       case 'results':
         const centerX = 200;
@@ -548,7 +646,7 @@ const App: React.FC = () => {
               <div className="flex gap-4">
                 {role === 'parent' && (
                   <button
-                    onClick={() => navigateTo('onboarding-child')}
+                    onClick={() => { setReAuthInput(''); setReAuthError(''); setShowReAuthModal(true); }}
                     className="bg-purple-600 text-white px-10 py-4 rounded-[2rem] font-black text-xl hover:bg-purple-500 transition-all kids-button-shadow"
                   >
                     ⚙️ Update Profile
@@ -1004,6 +1102,51 @@ const App: React.FC = () => {
       <main className="flex-1">
         {renderSection()}
       </main>
+
+      {/* ── Parent Re-Authentication Modal ────────────────────────────── */}
+      {showReAuthModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-[3rem] p-10 shadow-2xl border-4 border-purple-100 w-full max-w-sm mx-4 animate-pop-in">
+            <div className="text-center mb-6">
+              <div className="text-6xl mb-3">🔒</div>
+              <h3 className="text-2xl font-black text-purple-700">Verify Identity</h3>
+              <p className="text-slate-500 font-bold text-sm mt-1">Enter your password to edit the child profile.</p>
+            </div>
+            <input
+              type="password"
+              autoFocus
+              className={`w-full p-5 rounded-[2rem] bg-gray-50 border-4 outline-none text-gray-900 font-bold text-lg ${reAuthError ? 'border-red-400' : 'border-transparent focus:border-purple-300'}`}
+              placeholder="Your password"
+              value={reAuthInput}
+              onChange={e => { setReAuthInput(e.target.value); setReAuthError(''); }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  if (reAuthInput === parentPassword) { setShowReAuthModal(false); navigateTo('onboarding-child'); }
+                  else setReAuthError('Incorrect password. Please try again.');
+                }
+              }}
+            />
+            {reAuthError && <p className="text-red-500 text-sm font-bold mt-2 ml-2">⚠ {reAuthError}</p>}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowReAuthModal(false)}
+                className="flex-1 py-4 rounded-[2rem] bg-gray-100 text-gray-600 font-black text-lg hover:bg-gray-200 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (reAuthInput === parentPassword) { setShowReAuthModal(false); navigateTo('onboarding-child'); }
+                  else setReAuthError('Incorrect password. Please try again.');
+                }}
+                className="flex-1 py-4 rounded-[2rem] bg-purple-600 text-white font-black text-lg hover:bg-purple-500 transition-all"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {role === 'parent' && (
         <button
