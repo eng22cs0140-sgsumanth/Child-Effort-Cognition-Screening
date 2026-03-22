@@ -1,6 +1,10 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserRole, ChildProfile, ParentProfile, GameResult, Observation } from '../types';
+
+const SESSION_STORAGE_KEY = 'ceci_game_results';
+const CHILD_PROFILE_KEY = 'ceci_child_profile';
 
 interface AppState {
   role: UserRole | null;
@@ -24,11 +28,15 @@ const defaultChild: ChildProfile = {
   name: '',
   dob: '',
   age: 0,
+  sex: '',
+  isPremature: null,
+  gestationalAgeWeeks: 0,
+  familyHistoryOfDD: null,
+  knownConditions: '',
   bloodGroup: '',
   height: 0,
   weight: 0,
   bmi: 0,
-  conditions: '',
   observations: [],
 };
 
@@ -41,8 +49,33 @@ const defaultParent: ParentProfile = {
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<UserRole | null>(null);
   const [parent, setParent] = useState<ParentProfile>(defaultParent);
-  const [child, setChild] = useState<ChildProfile>(defaultChild);
+  const [child, setChildState] = useState<ChildProfile>(defaultChild);
   const [results, setResults] = useState<GameResult[]>([]);
+
+  // Load persisted data on mount
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [savedResults, savedChild] = await Promise.all([
+          AsyncStorage.getItem(SESSION_STORAGE_KEY),
+          AsyncStorage.getItem(CHILD_PROFILE_KEY),
+        ]);
+        if (savedResults) setResults(JSON.parse(savedResults));
+        if (savedChild) setChildState(JSON.parse(savedChild));
+      } catch {}
+    };
+    load();
+  }, []);
+
+  // Persist results whenever they change
+  useEffect(() => {
+    AsyncStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(results)).catch(() => {});
+  }, [results]);
+
+  const setChild = (c: ChildProfile) => {
+    setChildState(c);
+    AsyncStorage.setItem(CHILD_PROFILE_KEY, JSON.stringify(c)).catch(() => {});
+  };
 
   const calculateAge = (dob: string): number => {
     if (!dob) return 0;
@@ -70,7 +103,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setResults(prev => [...prev, enhancedResult]);
   };
 
-  const clearResults = () => setResults([]);
+  const clearResults = () => {
+    setResults([]);
+    AsyncStorage.removeItem(SESSION_STORAGE_KEY).catch(() => {});
+  };
 
   const addObservation = (text: string) => {
     const newObs: Observation = {
@@ -78,14 +114,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       text,
       timestamp: Date.now(),
     };
-    setChild(prev => ({ ...prev, observations: [newObs, ...prev.observations] }));
+    setChild({ ...child, observations: [newObs, ...child.observations] });
   };
 
   const resetApp = () => {
     setRole(null);
     setParent(defaultParent);
-    setChild(defaultChild);
+    setChildState(defaultChild);
     setResults([]);
+    AsyncStorage.multiRemove([SESSION_STORAGE_KEY, CHILD_PROFILE_KEY]).catch(() => {});
   };
 
   return (

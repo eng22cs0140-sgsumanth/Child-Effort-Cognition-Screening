@@ -32,12 +32,11 @@ export interface ChildProfile {
   sex: 'male' | 'female' | 'other' | '';
 
   // Prematurity — critical for corrected-age calculation (ASQ-3, Bayley-4)
-  isPremature: boolean;
+  isPremature: boolean | null;
   gestationalAgeWeeks: number;  // 0 if full-term or unknown
 
   // Clinical context — affects score interpretation
-  primaryLanguage: string;              // language spoken at home
-  familyHistoryOfDD: boolean;          // family history of ASD, ADHD, ID, or learning disorders
+  familyHistoryOfDD: boolean | null;   // family history of ASD, ADHD, ID, or learning disorders
   knownConditions: string;             // any diagnosed conditions (free text)
 
   observations: Observation[];

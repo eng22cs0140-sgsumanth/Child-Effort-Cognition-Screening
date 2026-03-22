@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, {
   Circle,
@@ -22,11 +24,15 @@ import Svg, {
 } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useApp } from '../context/AppContext';
 import { useCECICalculation } from '../hooks/useCECICalculation';
 import { calculateCECI } from '../ceciAlgorithm';
 import { COLORS } from '../constants';
+import { PARENT_CREDS_KEY } from './OnboardingParentScreen';
 
 type NavProp = StackNavigationProp<RootStackParamList, 'Results'>;
 
@@ -180,9 +186,106 @@ function MiniLineChart({ data }: MiniLineChartProps) {
 
 export default function ResultsScreen() {
   const navigation = useNavigation<NavProp>();
-  const { child, role, results, resetApp, addObservation } = useApp();
+  const { child, role, results, resetApp, addObservation, clearResults } = useApp();
   const [diaryOpen, setDiaryOpen] = useState(false);
   const [diaryInput, setDiaryInput] = useState('');
+
+  // ── Parent Re-Auth modal state ──────────────────────────────────────────
+  const [reAuthOpen, setReAuthOpen] = useState(false);
+  const [reAuthPassword, setReAuthPassword] = useState('');
+  const [reAuthError, setReAuthError] = useState('');
+
+  const handleUpdateProfile = () => {
+    setReAuthPassword('');
+    setReAuthError('');
+    setReAuthOpen(true);
+  };
+
+  const handleReAuthConfirm = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(PARENT_CREDS_KEY);
+      if (!stored) { navigation.navigate('OnboardingChild'); setReAuthOpen(false); return; }
+      const creds = JSON.parse(stored);
+      if (reAuthPassword !== creds.password) {
+        setReAuthError('Incorrect password. Please try again.');
+        return;
+      }
+      setReAuthOpen(false);
+      navigation.navigate('OnboardingChild');
+    } catch {
+      setReAuthError('Verification failed. Please try again.');
+    }
+  };
+
+  // ── PDF generation ──────────────────────────────────────────────────────
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    setGeneratingPdf(true);
+    try {
+      const riskColor = ceciScore.riskBand === 'green' ? '#22c55e'
+        : ceciScore.riskBand === 'amber' ? '#f59e0b' : '#ef4444';
+      const riskLabel = ceciScore.riskBand === 'green' ? 'Typical Development'
+        : ceciScore.riskBand === 'amber' ? 'Monitor Closely' : 'Specialist Recommended';
+
+      const domainGames: Record<string, string[]> = {
+        VMI: ['maze', 'numbersequencer'], FRI: ['memory', 'counting'],
+        LCI: ['sound'], IFI: ['simon', 'category'], API: ['catcher'], ATI: ['leader', 'emotion'],
+      };
+      const domainRows = Object.entries(domainGames).map(([key, games]) => {
+        const dr = results.filter(r => games.includes(r.gameId));
+        const score = dr.length > 0 ? Math.round(dr.reduce((s, r) => s + Math.min(100, r.score), 0) / dr.length) : 0;
+        return `<tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">${key}</td><td style="padding:8px;border:1px solid #e2e8f0">${score}%</td></tr>`;
+      }).join('');
+
+      const gameRows = [...results].sort((a, b) => b.timestamp - a.timestamp).slice(0, 10).map(r => {
+        const names: Record<string,string> = { catcher:'Reaction Catcher', memory:'Memory Match', numbersequencer:'Number Sequencer', sound:'Sound & Words', leader:'Follow the Leader', counting:'Counting Garden', emotion:'Emotion Detective', simon:'Simon Says', maze:'Treasure Maze', category:'Category Sort' };
+        return `<tr><td style="padding:8px;border:1px solid #e2e8f0">${names[r.gameId]||r.gameId}</td><td style="padding:8px;border:1px solid #e2e8f0">${r.score}%</td><td style="padding:8px;border:1px solid #e2e8f0">${new Date(r.timestamp).toLocaleDateString()}</td></tr>`;
+      }).join('');
+
+      const html = `
+        <!DOCTYPE html><html><head><meta charset="utf-8">
+        <style>body{font-family:Arial,sans-serif;margin:40px;color:#1e293b}h1{color:#7C3AED}h2{color:#334155;border-bottom:2px solid #e2e8f0;padding-bottom:8px}table{width:100%;border-collapse:collapse;margin-bottom:20px}.badge{display:inline-block;padding:6px 16px;border-radius:20px;color:white;font-weight:bold}</style>
+        </head><body>
+        <h1>CECI Assessment Report</h1>
+        <p style="color:#64748b">Generated: ${new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' })}</p>
+        <h2>Child Profile</h2>
+        <table><tr><td style="padding:8px;border:1px solid #e2e8f0"><b>Name</b></td><td style="padding:8px;border:1px solid #e2e8f0">${child.name||'—'}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><b>Age</b></td><td style="padding:8px;border:1px solid #e2e8f0">${child.age} years</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><b>Sex</b></td><td style="padding:8px;border:1px solid #e2e8f0">${child.sex||'Not specified'}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><b>Birth History</b></td><td style="padding:8px;border:1px solid #e2e8f0">${child.isPremature ? `Premature (${child.gestationalAgeWeeks} wks)` : child.isPremature===false ? 'Full-term' : 'Not specified'}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><b>Family History</b></td><td style="padding:8px;border:1px solid #e2e8f0">${child.familyHistoryOfDD ? 'ASD/ADHD/ID reported' : child.familyHistoryOfDD===false ? 'None reported' : 'Not specified'}</td></tr>
+        ${child.knownConditions ? `<tr><td style="padding:8px;border:1px solid #e2e8f0"><b>Conditions</b></td><td style="padding:8px;border:1px solid #e2e8f0">${child.knownConditions}</td></tr>` : ''}
+        ${child.bloodGroup ? `<tr><td style="padding:8px;border:1px solid #e2e8f0"><b>Blood Group</b></td><td style="padding:8px;border:1px solid #e2e8f0">${child.bloodGroup}</td></tr>` : ''}
+        ${child.bmi > 0 ? `<tr><td style="padding:8px;border:1px solid #e2e8f0"><b>BMI</b></td><td style="padding:8px;border:1px solid #e2e8f0">${child.bmi} (${child.height}cm / ${child.weight}kg)</td></tr>` : ''}
+        </table>
+        <h2>CECI Assessment</h2>
+        <p><span class="badge" style="background:${riskColor}">${riskLabel}</span></p>
+        <table><tr><td style="padding:8px;border:1px solid #e2e8f0"><b>Overall Score</b></td><td style="padding:8px;border:1px solid #e2e8f0">${ceciScore.overall}%</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><b>Confidence</b></td><td style="padding:8px;border:1px solid #e2e8f0">${ceciScore.confidence}%</td></tr>
+        <tr><td style="padding:8px;border:1px solid #e2e8f0"><b>Recommendation</b></td><td style="padding:8px;border:1px solid #e2e8f0">${ceciScore.recommendation}</td></tr>
+        </table>
+        <h2>Domain Assessment Indices</h2>
+        <table><tr style="background:#f8fafc"><th style="padding:8px;border:1px solid #e2e8f0;text-align:left">Domain</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:left">Score</th></tr>${domainRows}</table>
+        <h2>Session History</h2>
+        <table><tr style="background:#f8fafc"><th style="padding:8px;border:1px solid #e2e8f0;text-align:left">Game</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:left">Score</th><th style="padding:8px;border:1px solid #e2e8f0;text-align:left">Date</th></tr>${gameRows||'<tr><td colspan="3" style="padding:8px;text-align:center;color:#94a3b8">No games played yet</td></tr>'}</table>
+        ${child.observations.length > 0 ? `<h2>Parent Observations</h2>${child.observations.map(o => `<div style="background:#f8fafc;border-left:4px solid #f59e0b;padding:12px;margin-bottom:8px;border-radius:4px"><small style="color:#94a3b8">${new Date(o.timestamp).toLocaleDateString()}</small><p style="margin:4px 0 0">${o.text}</p></div>`).join('')}` : ''}
+        <p style="margin-top:40px;color:#94a3b8;font-size:12px">This report is generated by CECI Screening App. It is a screening tool, not a clinical diagnosis. Please consult a qualified professional for clinical assessment.</p>
+        </body></html>`;
+
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Assessment_${child.name||'Report'}.pdf` });
+      } else {
+        Alert.alert('PDF saved', `Report saved to: ${uri}`);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to generate PDF. Please try again.');
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
 
   // ── Shared CECI calculation (used by both views) ────────────────────────
   const {
@@ -387,7 +490,7 @@ export default function ResultsScreen() {
             </View>
             <TouchableOpacity
               style={styles.updateBtn}
-              onPress={() => navigation.navigate('OnboardingChild')}
+              onPress={handleUpdateProfile}
             >
               <Text style={styles.updateBtnText}>⚙️ Update</Text>
             </TouchableOpacity>
@@ -395,7 +498,9 @@ export default function ResultsScreen() {
 
           {/* ── 1. Child Card ── */}
           <View style={[styles.childCard, { backgroundColor: status.bg, borderColor: status.border }]}>
-            <Text style={styles.childAvatar}>{getChildAvatar(child.name || 'A')}</Text>
+            <Text style={styles.childAvatar}>
+              {child.sex === 'female' ? '👧' : child.sex === 'male' ? '👦' : getChildAvatar(child.name || 'A')}
+            </Text>
             <View style={styles.childInfo}>
               <Text style={styles.childName}>{child.name || 'Your Child'}</Text>
               {child.age > 0 && (
@@ -487,16 +592,18 @@ export default function ResultsScreen() {
             )}
           </View>
 
-          {/* ── 7. Recommendations ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Tips For You</Text>
-            {recs.map((tip, i) => (
-              <View key={i} style={styles.tipRow}>
-                <View style={styles.tipBullet} />
-                <Text style={styles.tipText}>{tip}</Text>
-              </View>
-            ))}
-          </View>
+          {/* ── 7. Recommendations — only after games played ── */}
+          {hasData && (
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Tips For You</Text>
+              {recs.map((tip, i) => (
+                <View key={i} style={styles.tipRow}>
+                  <View style={styles.tipBullet} />
+                  <Text style={styles.tipText}>{tip}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* ── 8. Privacy & Safety ── */}
           <View style={[styles.sectionCard, { backgroundColor: '#f0fdf4', borderColor: '#86efac' }]}>
@@ -578,11 +685,45 @@ export default function ResultsScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* Re-Auth Modal */}
+        <Modal visible={reAuthOpen} animationType="slide" transparent onRequestClose={() => setReAuthOpen(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>🔐 Verify Identity</Text>
+              <Text style={styles.modalSubtitle}>Enter your password to update the child profile.</Text>
+              <TextInput
+                style={[styles.diaryInput, reAuthError ? { borderColor: '#EF4444' } : null]}
+                value={reAuthPassword}
+                onChangeText={v => { setReAuthPassword(v); setReAuthError(''); }}
+                placeholder="Your password"
+                placeholderTextColor={COLORS.gray400}
+                secureTextEntry
+                autoFocus
+              />
+              {reAuthError ? <Text style={{ color: '#EF4444', fontSize: 13, fontWeight: '700', marginBottom: 8, marginLeft: 4 }}>⚠ {reAuthError}</Text> : null}
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                <TouchableOpacity
+                  style={[styles.writeBtn, { flex: 1, backgroundColor: COLORS.gray100, borderRadius: 20, paddingVertical: 14 }]}
+                  onPress={() => setReAuthOpen(false)}
+                >
+                  <Text style={{ color: COLORS.gray600, fontWeight: '900', fontSize: 16 }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.writeBtn, { flex: 1, backgroundColor: COLORS.primary, borderRadius: 20, paddingVertical: 14 }]}
+                  onPress={handleReAuthConfirm}
+                >
+                  <Text style={styles.writeBtnText}>Confirm</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     );
   }
 
-  // ── Doctor view (completely unchanged) ─────────────────────────────────
+  // ── Doctor view ─────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -836,37 +977,147 @@ export default function ResultsScreen() {
           ))}
         </View>
 
-        {/* Doctor Notes */}
+        {/* Child Profile Summary */}
         <View style={styles.doctorCard}>
-          <Text style={styles.doctorTitle}>Doctor's Clinical Notes</Text>
-          <Text style={styles.doctorMeta}>
-            {child.bloodGroup || 'Unknown BG'} • BMI {child.bmi} • Age {child.age}
-          </Text>
-          <TextInput
-            style={styles.doctorInput}
-            multiline
-            numberOfLines={4}
-            placeholder="Type clinical findings..."
-            placeholderTextColor={COLORS.gray400}
-          />
-          <TouchableOpacity style={styles.submitBtn}>
-            <Text style={styles.submitBtnText}>Submit Official Assessment</Text>
-          </TouchableOpacity>
+          <Text style={styles.doctorTitle}>👤 Child Profile</Text>
+          {[
+            { label: 'Age', value: `${child.age} yrs`, icon: '🎂' },
+            { label: 'Sex', value: child.sex ? (child.sex === 'male' ? 'Boy' : child.sex === 'female' ? 'Girl' : 'Other') : 'Not specified', icon: child.sex === 'female' ? '👧' : child.sex === 'male' ? '👦' : '⚧' },
+            { label: 'Birth', value: child.isPremature ? `Premature (${child.gestationalAgeWeeks || '?'} wks)` : child.isPremature === false ? 'Full-term' : 'Not specified', icon: '🏥' },
+            { label: 'Family History', value: child.familyHistoryOfDD ? 'ASD/ADHD/ID reported' : child.familyHistoryOfDD === false ? 'None reported' : 'Not specified', icon: '🧬' },
+            ...(child.knownConditions ? [{ label: 'Conditions', value: child.knownConditions, icon: '📋' }] : []),
+            ...(child.bloodGroup ? [{ label: 'Blood Group', value: child.bloodGroup, icon: '🩸' }] : []),
+            ...(child.bmi > 0 ? [{ label: 'BMI', value: String(child.bmi), icon: '⚖️' }] : []),
+          ].map((stat, i) => (
+            <View key={i} style={styles.profileRow}>
+              <Text style={styles.profileIcon}>{stat.icon}</Text>
+              <Text style={styles.profileLabel}>{stat.label}</Text>
+              <Text style={styles.profileValue}>{stat.value}</Text>
+            </View>
+          ))}
+        </View>
 
-          {/* Diary View for Doctor */}
-          <View style={styles.diarySection}>
-            <Text style={styles.diaryTitle}>📒 Parent Observations Diary</Text>
-            {child.observations.length === 0 ? (
-              <Text style={styles.diaryEmpty}>No diary notes added yet.</Text>
-            ) : (
-              child.observations.map(obs => (
-                <View key={obs.id} style={styles.diaryEntry}>
-                  <Text style={styles.diaryDate}>{new Date(obs.timestamp).toLocaleDateString()}</Text>
-                  <Text style={styles.diaryText}>{obs.text}</Text>
+        {/* Domain Assessment Indices */}
+        <View style={styles.doctorCard}>
+          <Text style={styles.doctorTitle}>Domain Assessment Indices</Text>
+          <Text style={styles.doctorMeta}>Neuropsychological domain scores derived from game telemetry</Text>
+          {([
+            { label: 'VMI', full: 'Visual-Motor Integration', color: '#2563EB', bg: '#EFF6FF' },
+            { label: 'FRI', full: 'Fluid Reasoning Index', color: '#7C3AED', bg: '#F5F3FF' },
+            { label: 'LCI', full: 'Language Comprehension', color: '#16A34A', bg: '#F0FDF4' },
+            { label: 'IFI', full: 'Inhibitory Function', color: '#EA580C', bg: '#FFF7ED' },
+            { label: 'API', full: 'Attention Processing', color: '#DC2626', bg: '#FFF1F2' },
+            { label: 'ATI', full: 'Attention-Task Integration', color: '#4F46E5', bg: '#EEF2FF' },
+          ] as const).map(idx => {
+            // Derive domain score from game results
+            const domainGames: Record<string, string[]> = {
+              VMI: ['maze', 'numbersequencer'],
+              FRI: ['memory', 'counting'],
+              LCI: ['sound'],
+              IFI: ['simon', 'category'],
+              API: ['catcher'],
+              ATI: ['leader', 'emotion'],
+            };
+            const gameList = domainGames[idx.label] ?? [];
+            const domainResults = results.filter(r => gameList.includes(r.gameId));
+            const score = domainResults.length > 0
+              ? Math.round(domainResults.reduce((s, r) => s + Math.min(100, r.score), 0) / domainResults.length)
+              : 0;
+            return (
+              <View key={idx.label} style={[styles.domainRow, { backgroundColor: idx.bg }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.domainLabel, { color: idx.color }]}>{idx.label}</Text>
+                  <Text style={styles.domainFull}>{idx.full}</Text>
+                  <View style={styles.domainBarBg}>
+                    <View style={[styles.domainBarFill, { width: `${score}%` as any, backgroundColor: idx.color }]} />
+                  </View>
                 </View>
-              ))
-            )}
-          </View>
+                <Text style={[styles.domainScore, { color: idx.color }]}>{score}%</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Official Clinical Assessment Form */}
+        <View style={styles.doctorCard}>
+          <Text style={styles.doctorTitle}>📋 Official Clinical Assessment</Text>
+          <Text style={styles.doctorMeta}>Fill in the details below for the formal report.</Text>
+
+          {[
+            { label: 'EXAMINER NAME', placeholder: 'Dr. ...', key: 'examinerName' },
+            { label: 'CASE NUMBER', placeholder: `CS-${Math.floor(Math.random() * 90000) + 10000}`, key: 'caseNo' },
+            { label: 'REFERRAL SOURCE', placeholder: 'e.g. Parent, School, Paediatrician', key: 'referralSource' },
+          ].map(field => (
+            <View key={field.key} style={styles.formField}>
+              <Text style={styles.formLabel}>{field.label}</Text>
+              <TextInput
+                style={styles.formInput}
+                placeholder={field.placeholder}
+                placeholderTextColor={COLORS.gray400}
+              />
+            </View>
+          ))}
+
+          {[
+            { label: 'PRESENTING COMPLAINTS', placeholder: 'Describe the main concerns...', key: 'complaints' },
+            { label: 'BEHAVIOURAL OBSERVATIONS', placeholder: 'Describe observed behaviour during assessment...', key: 'behaviour' },
+            { label: 'TENTATIVE DIAGNOSIS', placeholder: 'e.g. Typical development / ASD risk / ADHD...', key: 'diagnosis' },
+            { label: 'CLINICAL FINDINGS & NOTES', placeholder: 'Detailed clinical notes...', key: 'findings' },
+            { label: 'RECOMMENDATIONS', placeholder: 'Suggested next steps and interventions...', key: 'recs' },
+          ].map(field => (
+            <View key={field.key} style={styles.formField}>
+              <Text style={styles.formLabel}>{field.label}</Text>
+              <TextInput
+                style={[styles.formInput, styles.formTextarea]}
+                placeholder={field.placeholder}
+                placeholderTextColor={COLORS.gray400}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+          ))}
+
+          <TouchableOpacity style={styles.submitBtn}>
+            <Text style={styles.submitBtnText}>Submit Official Assessment ✓</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Download PDF Report */}
+        <TouchableOpacity
+          style={[styles.pdfBtn, generatingPdf && { opacity: 0.7 }]}
+          onPress={handleDownloadPDF}
+          disabled={generatingPdf}
+        >
+          {generatingPdf
+            ? <ActivityIndicator color={COLORS.white} />
+            : <Text style={styles.pdfBtnText}>⬇️  Download PDF Report</Text>
+          }
+        </TouchableOpacity>
+
+        {/* Clear Session History */}
+        <TouchableOpacity
+          style={styles.clearBtn}
+          onPress={() => Alert.alert('Clear Sessions', 'Delete all game session history?', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Clear', style: 'destructive', onPress: clearResults },
+          ])}
+        >
+          <Text style={styles.clearBtnText}>🗑  Clear Session History</Text>
+        </TouchableOpacity>
+
+        {/* Parent Observations Diary */}
+        <View style={styles.doctorCard}>
+          <Text style={styles.doctorTitle}>📒 Parent Observations Diary</Text>
+          {child.observations.length === 0 ? (
+            <Text style={styles.diaryEmpty}>No diary entries available.</Text>
+          ) : (
+            child.observations.map(obs => (
+              <View key={obs.id} style={styles.diaryEntry}>
+                <Text style={styles.diaryDate}>{new Date(obs.timestamp).toLocaleDateString()}</Text>
+                <Text style={styles.diaryText}>{obs.text}</Text>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Log Out */}
@@ -1360,7 +1611,85 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   submitBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '900' },
+
+  pdfBtn: {
+    backgroundColor: '#16A34A',
+    borderRadius: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  pdfBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '900' },
+
+  clearBtn: {
+    backgroundColor: COLORS.gray100,
+    borderRadius: 24,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  clearBtnText: { color: '#EF4444', fontSize: 15, fontWeight: '800' },
+
+  // ── Doctor: child profile summary ──────────────────────────────────────
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 8,
+    gap: 10,
+  },
+  profileIcon: { fontSize: 20, width: 30, textAlign: 'center' },
+  profileLabel: { fontSize: 12, fontWeight: '900', color: '#64748B', textTransform: 'uppercase', flex: 1 },
+  profileValue: { fontSize: 13, fontWeight: '800', color: '#1E3A5F', textAlign: 'right' },
+
+  // ── Doctor: domain indices ─────────────────────────────────────────────
+  domainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 10,
+    gap: 12,
+  },
+  domainLabel: { fontSize: 16, fontWeight: '900' },
+  domainFull: { fontSize: 10, fontWeight: '700', color: '#64748B', marginTop: 2, marginBottom: 8 },
+  domainBarBg: { height: 6, backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 3, overflow: 'hidden' },
+  domainBarFill: { height: 6, borderRadius: 3 },
+  domainScore: { fontSize: 22, fontWeight: '900', minWidth: 52, textAlign: 'right' },
+
+  // ── Doctor: clinical form ──────────────────────────────────────────────
+  formField: { marginBottom: 16 },
+  formLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#64748B',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  formInput: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.gray700,
+    borderWidth: 2,
+    borderColor: '#BFDBFE',
+  },
+  formTextarea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
 });

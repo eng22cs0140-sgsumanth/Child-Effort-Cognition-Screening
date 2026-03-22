@@ -10,7 +10,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -19,14 +21,37 @@ import { COLORS } from '../constants';
 
 type NavProp = StackNavigationProp<RootStackParamList, 'OnboardingParent'>;
 
+export const PARENT_CREDS_KEY = 'ceci_parent_credentials';
+
 export default function OnboardingParentScreen() {
   const navigation = useNavigation<NavProp>();
   const { parent, setParent } = useApp();
   const [name, setName] = useState(parent.name);
   const [email, setEmail] = useState(parent.email);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirm?: string }>({});
 
-  const handleContinue = () => {
-    setParent({ ...parent, name, email });
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+  const isValidName = (n: string) => n.trim().length >= 2 && /[a-zA-Z]/.test(n);
+
+  const handleContinue = async () => {
+    const errs: typeof errors = {};
+    if (!isValidName(name)) errs.name = 'Please enter your full name (at least 2 letters).';
+    if (!isValidEmail(email)) errs.email = 'Please enter a valid email address.';
+    if (!password || password.length < 4) errs.password = 'Password must be at least 4 characters.';
+    if (password !== confirmPassword) errs.confirm = 'Passwords do not match.';
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    try {
+      await AsyncStorage.setItem(PARENT_CREDS_KEY, JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), password }));
+    } catch (e) {
+      Alert.alert('Error', 'Could not save credentials. Please try again.');
+      return;
+    }
+
+    setParent({ ...parent, name: name.trim(), email: email.trim() });
     navigation.navigate('OnboardingChild');
   };
 
@@ -43,35 +68,63 @@ export default function OnboardingParentScreen() {
 
           <View style={styles.card}>
             <View style={styles.colorBar} />
-            <Text style={styles.title}>Hello, Parent! 👋</Text>
+            <Text style={styles.title}>Create Account 👋</Text>
+            <Text style={styles.subtitle}>Set up your parent profile to access the dashboard.</Text>
 
             <View style={styles.field}>
-              <Text style={styles.label}>YOUR FULL NAME</Text>
+              <Text style={styles.label}>YOUR FULL NAME *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.name ? styles.inputError : null]}
                 value={name}
-                onChangeText={setName}
-                placeholder="Super Parent Name"
+                onChangeText={v => { setName(v); setErrors(e => ({ ...e, name: undefined })); }}
+                placeholder="Your full name"
                 placeholderTextColor={COLORS.gray400}
               />
+              {errors.name ? <Text style={styles.errorText}>⚠ {errors.name}</Text> : null}
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>EMAIL ADDRESS</Text>
+              <Text style={styles.label}>EMAIL ADDRESS *</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.email ? styles.inputError : null]}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={v => { setEmail(v); setErrors(e => ({ ...e, email: undefined })); }}
                 placeholder="you@email.com"
                 placeholderTextColor={COLORS.gray400}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
+              {errors.email ? <Text style={styles.errorText}>⚠ {errors.email}</Text> : null}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>CREATE PASSWORD *</Text>
+              <TextInput
+                style={[styles.input, errors.password ? styles.inputError : null]}
+                value={password}
+                onChangeText={v => { setPassword(v); setErrors(e => ({ ...e, password: undefined })); }}
+                placeholder="Min. 4 characters"
+                placeholderTextColor={COLORS.gray400}
+                secureTextEntry
+              />
+              {errors.password ? <Text style={styles.errorText}>⚠ {errors.password}</Text> : null}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>CONFIRM PASSWORD *</Text>
+              <TextInput
+                style={[styles.input, errors.confirm ? styles.inputError : null]}
+                value={confirmPassword}
+                onChangeText={v => { setConfirmPassword(v); setErrors(e => ({ ...e, confirm: undefined })); }}
+                placeholder="Re-enter password"
+                placeholderTextColor={COLORS.gray400}
+                secureTextEntry
+              />
+              {errors.confirm ? <Text style={styles.errorText}>⚠ {errors.confirm}</Text> : null}
             </View>
 
             <TouchableOpacity
-              style={[styles.btn, (!name || !email) && styles.btnDisabled]}
-              disabled={!name || !email}
+              style={styles.btn}
               onPress={handleContinue}
               activeOpacity={0.85}
             >
@@ -133,14 +186,21 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 40,
   },
   title: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '900',
     color: COLORS.primary,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 8,
     marginTop: 8,
   },
-  field: { marginBottom: 24 },
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.gray400,
+    textAlign: 'center',
+    marginBottom: 28,
+  },
+  field: { marginBottom: 20 },
   label: {
     fontSize: 11,
     fontWeight: '900',
@@ -159,6 +219,16 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: 'transparent',
   },
+  inputError: {
+    borderColor: '#EF4444',
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 6,
+    marginLeft: 4,
+  },
   btn: {
     backgroundColor: COLORS.orange,
     borderRadius: 28,
@@ -171,7 +241,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  btnDisabled: { opacity: 0.5 },
   btnText: {
     color: COLORS.white,
     fontSize: 18,

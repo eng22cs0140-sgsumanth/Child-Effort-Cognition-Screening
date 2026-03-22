@@ -17,11 +17,24 @@ export interface ChildProfile {
   name: string;
   dob: string;
   age: number;
+
+  // Sex — essential for normative scoring
+  sex: 'male' | 'female' | 'other' | '';
+
+  // Prematurity — critical for corrected-age calculation
+  isPremature: boolean | null;
+  gestationalAgeWeeks: number;
+
+  // Clinical context — affects score interpretation
+  familyHistoryOfDD: boolean | null;
+  knownConditions: string;
+
+  // Physical metrics
   bloodGroup: string;
   height: number;
   weight: number;
   bmi: number;
-  conditions: string;
+
   observations: Observation[];
 }
 

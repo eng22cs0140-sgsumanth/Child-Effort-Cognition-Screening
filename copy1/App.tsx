@@ -10,6 +10,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 const SESSION_STORAGE_KEY = 'ceci_sessions';
+const PARENT_CREDENTIALS_KEY = 'ceci_parent_credentials';
 
 // ── Validation helpers ────────────────────────────────────────────────────
 const isValidEmail = (email: string) =>
@@ -33,6 +34,12 @@ const App: React.FC = () => {
   const [reAuthInput, setReAuthInput]         = useState('');
   const [reAuthError, setReAuthError]         = useState('');
 
+  // ── Parent Login Modal ─────────────────────────────────────────────────
+  const [showParentLoginModal, setShowParentLoginModal] = useState(false);
+  const [loginEmail, setLoginEmail]   = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError]   = useState('');
+
   // ── Child form validation errors ──────────────────────────────────────
   const [childErrors, setChildErrors] = useState<{
     name?: string; dob?: string; gestationalAge?: string;
@@ -49,10 +56,9 @@ const App: React.FC = () => {
     dob: '',
     age: 0,
     sex: '',
-    isPremature: false,
+    isPremature: null,
     gestationalAgeWeeks: 0,
-    primaryLanguage: '',
-    familyHistoryOfDD: false,
+    familyHistoryOfDD: null,
     knownConditions: '',
     observations: []
   });
@@ -233,7 +239,20 @@ const App: React.FC = () => {
     } else if (selectedRole === 'doctor') {
       navigateTo('results');
     } else {
-      navigateTo('onboarding-parent');
+      // Parent — check if already registered
+      const stored = localStorage.getItem(PARENT_CREDENTIALS_KEY);
+      if (stored) {
+        try {
+          const creds = JSON.parse(stored);
+          setParent(prev => ({ ...prev, name: creds.name, email: creds.email }));
+        } catch {}
+        setLoginEmail('');
+        setLoginPassword('');
+        setLoginError('');
+        setShowParentLoginModal(true);
+      } else {
+        navigateTo('onboarding-parent');
+      }
     }
   };
 
@@ -366,7 +385,12 @@ const App: React.FC = () => {
           if (!parentPassword)             errs.password = 'Please create a password to protect this profile.';
           else if (parentPassword.length < 4) errs.password = 'Password must be at least 4 characters.';
           setParentErrors(errs);
-          if (Object.keys(errs).length === 0) navigateTo('onboarding-child');
+          if (Object.keys(errs).length === 0) {
+            localStorage.setItem(PARENT_CREDENTIALS_KEY, JSON.stringify({
+              name: parent.name, email: parent.email, password: parentPassword
+            }));
+            navigateTo('onboarding-child');
+          }
         };
         return (
           <div className="max-w-xl mx-auto py-20 px-4 animate-pop-in">
@@ -515,9 +539,9 @@ const App: React.FC = () => {
                         type="button"
                         onClick={() => setChild({...child, isPremature: opt.val, gestationalAgeWeeks: opt.val ? child.gestationalAgeWeeks : 0})}
                         className={`flex-1 py-4 rounded-[2rem] font-black text-lg transition-all border-4 ${
-                          child.isPremature === opt.val
+                          child.isPremature === opt.val && child.isPremature !== null
                             ? 'bg-orange-500 text-white border-orange-500'
-                            : 'bg-white text-gray-500 border-gray-200 hover:border-orange-200'
+                            : 'bg-white text-gray-500 border-white hover:border-orange-200'
                         }`}
                       >
                         {opt.label}
@@ -547,24 +571,9 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* ── Section 3: Language & Background ── */}
-              <p className="text-xs font-black text-purple-400 uppercase tracking-widest mb-4">Language & Background <span className="text-slate-300 normal-case font-bold">(recommended)</span></p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
-                  <label className="block text-gray-500 font-black mb-2 ml-2 text-xs uppercase">Primary Language at Home</label>
-                  <select
-                    className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-200 outline-none text-gray-900 font-bold text-lg appearance-none"
-                    value={child.primaryLanguage}
-                    onChange={e => setChild({...child, primaryLanguage: e.target.value})}
-                  >
-                    <option value="">Select language</option>
-                    {['English', 'Hindi', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Marathi', 'Bengali', 'Gujarati', 'Punjabi', 'Urdu', 'Other'].map(l => (
-                      <option key={l} value={l}>{l}</option>
-                    ))}
-                  </select>
-                  <p className="text-slate-400 text-xs font-bold mt-2 ml-2">Bilingual children need language context for accurate domain scoring.</p>
-                </div>
-
+              {/* ── Section 3: Family & Medical Background ── */}
+              <p className="text-xs font-black text-purple-400 uppercase tracking-widest mb-4">Family & Medical Background <span className="text-slate-300 normal-case font-bold">(recommended)</span></p>
+              <div className="grid grid-cols-1 gap-6 mb-8">
                 <div className="bg-slate-50 p-6 rounded-[2rem] border-4 border-transparent">
                   <label className="block text-gray-600 font-black mb-1 text-sm">Family history of ASD, ADHD, intellectual disability, or learning disorders?</label>
                   <p className="text-slate-400 text-xs font-bold mb-4">(in a parent or sibling)</p>
@@ -577,7 +586,7 @@ const App: React.FC = () => {
                         className={`flex-1 py-3 rounded-[2rem] font-black text-base transition-all border-4 ${
                           child.familyHistoryOfDD === opt.val
                             ? 'bg-purple-600 text-white border-purple-600'
-                            : 'bg-white text-gray-500 border-gray-200 hover:border-purple-200'
+                            : 'bg-white text-gray-500 border-white hover:border-purple-200'
                         }`}
                       >
                         {opt.label}
@@ -586,7 +595,7 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="col-span-full">
+                <div>
                   <label className="block text-gray-500 font-black mb-2 ml-2 text-xs uppercase">Known Medical Conditions or Diagnoses</label>
                   <input
                     type="text"
@@ -635,28 +644,35 @@ const App: React.FC = () => {
           const avgScore = results.length > 0 ? results.reduce((s, r) => s + r.score, 0) / results.length : 0;
           const avgRt = results.reduce((s, r) => s + (r.telemetry?.avgResponseTime ?? 1500), 0) / (results.length || 1);
 
-          const behaviorCards = [
-            {
-              icon: '⚡', label: 'Reaction Speed',
-              value: avgRt < 900 ? 'Fast' : avgRt < 1600 ? 'Good' : 'Developing',
-              color: avgRt < 900 ? '#22c55e' : avgRt < 1600 ? '#3b82f6' : '#f59e0b',
-            },
-            {
-              icon: '🎯', label: 'Accuracy',
-              value: avgScore >= 72 ? 'High' : avgScore >= 48 ? 'Good' : 'Developing',
-              color: avgScore >= 72 ? '#22c55e' : avgScore >= 48 ? '#3b82f6' : '#f59e0b',
-            },
-            {
-              icon: '⏳', label: 'Attention',
-              value: scores.attention >= 70 ? 'Consistent' : scores.attention >= 45 ? 'Sometimes' : 'Variable',
-              color: scores.attention >= 70 ? '#22c55e' : scores.attention >= 45 ? '#3b82f6' : '#f59e0b',
-            },
-            {
-              icon: '🎮', label: 'Engagement Level',
-              value: scores.social >= 70 ? 'Great' : scores.social >= 45 ? 'Good' : 'Could Be Higher',
-              color: scores.social >= 70 ? '#22c55e' : scores.social >= 45 ? '#3b82f6' : '#f59e0b',
-            },
-          ];
+          const behaviorCards = results.length === 0
+            ? [
+                { icon: '⚡', label: 'Reaction Speed', value: '—', color: '#94a3b8' },
+                { icon: '🎯', label: 'Accuracy', value: '—', color: '#94a3b8' },
+                { icon: '⏳', label: 'Attention', value: '—', color: '#94a3b8' },
+                { icon: '🎮', label: 'Engagement Level', value: '—', color: '#94a3b8' },
+              ]
+            : [
+                {
+                  icon: '⚡', label: 'Reaction Speed',
+                  value: avgRt < 900 ? 'Fast' : avgRt < 1600 ? 'Good' : 'Developing',
+                  color: avgRt < 900 ? '#22c55e' : avgRt < 1600 ? '#3b82f6' : '#f59e0b',
+                },
+                {
+                  icon: '🎯', label: 'Accuracy',
+                  value: avgScore >= 72 ? 'High' : avgScore >= 48 ? 'Good' : 'Developing',
+                  color: avgScore >= 72 ? '#22c55e' : avgScore >= 48 ? '#3b82f6' : '#f59e0b',
+                },
+                {
+                  icon: '⏳', label: 'Attention',
+                  value: scores.attention >= 70 ? 'Consistent' : scores.attention >= 45 ? 'Sometimes' : 'Variable',
+                  color: scores.attention >= 70 ? '#22c55e' : scores.attention >= 45 ? '#3b82f6' : '#f59e0b',
+                },
+                {
+                  icon: '🎮', label: 'Engagement Level',
+                  value: scores.social >= 70 ? 'Great' : scores.social >= 45 ? 'Good' : 'Could Be Higher',
+                  color: scores.social >= 70 ? '#22c55e' : scores.social >= 45 ? '#3b82f6' : '#f59e0b',
+                },
+              ];
 
           const recommendations = ceciAnalysis?.riskBand === 'red'
             ? ['Follow up if performance remains inconsistent', 'Speak with your paediatrician about these results', 'Reduce distractions during play sessions', 'Keep a daily activity journal']
@@ -819,18 +835,20 @@ const App: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Recommendations */}
-                  <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-slate-100 p-6">
-                    <h2 className="text-lg font-black text-slate-800 mb-4">Recommendations</h2>
-                    <div className="space-y-3">
-                      {recommendations.map((rec, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                          <div className="w-9 h-9 rounded-full flex items-center justify-center text-lg shrink-0 bg-slate-100">{recIcons[i]}</div>
-                          <p className="text-slate-600 font-bold text-sm leading-snug pt-1">{rec}</p>
-                        </div>
-                      ))}
+                  {/* Recommendations — only after games played */}
+                  {results.length > 0 && ceciAnalysis && (
+                    <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-slate-100 p-6">
+                      <h2 className="text-lg font-black text-slate-800 mb-4">Recommendations</h2>
+                      <div className="space-y-3">
+                        {recommendations.map((rec, i) => (
+                          <div key={i} className="flex items-start gap-3">
+                            <div className="w-9 h-9 rounded-full flex items-center justify-center text-lg shrink-0 bg-slate-100">{recIcons[i]}</div>
+                            <p className="text-slate-600 font-bold text-sm leading-snug pt-1">{rec}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Play games CTA */}
                   <button
@@ -942,9 +960,8 @@ const App: React.FC = () => {
                     {[
                       { label: 'Age', value: `${child.age} yrs`, icon: '🎂', color: 'text-blue-500' },
                       { label: 'Sex', value: child.sex ? (child.sex === 'male' ? 'Boy' : child.sex === 'female' ? 'Girl' : 'Other') : 'N/A', icon: child.sex === 'male' ? '👦' : child.sex === 'female' ? '👧' : '⚧', color: 'text-purple-500' },
-                      { label: 'Birth', value: child.isPremature ? `Premature (${child.gestationalAgeWeeks || '?'} wks)` : 'Full-term', icon: '🏥', color: child.isPremature ? 'text-orange-500' : 'text-green-500' },
-                      { label: 'Language', value: child.primaryLanguage || 'Not specified', icon: '🗣️', color: 'text-indigo-500' },
-                      { label: 'Family History', value: child.familyHistoryOfDD ? 'ASD/ADHD/ID reported' : 'None reported', icon: '🧬', color: child.familyHistoryOfDD ? 'text-red-500' : 'text-slate-500' },
+                      { label: 'Birth', value: child.isPremature ? `Premature (${child.gestationalAgeWeeks || '?'} wks)` : child.isPremature === false ? 'Full-term' : 'Not specified', icon: '🏥', color: child.isPremature ? 'text-orange-500' : 'text-green-500' },
+                      { label: 'Family History', value: child.familyHistoryOfDD ? 'ASD/ADHD/ID reported' : child.familyHistoryOfDD === false ? 'None reported' : 'Not specified', icon: '🧬', color: child.familyHistoryOfDD ? 'text-red-500' : 'text-slate-500' },
                       ...(child.knownConditions ? [{ label: 'Conditions', value: child.knownConditions, icon: '📋', color: 'text-amber-600' }] : []),
                     ].map((stat, i) => (
                       <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 gap-3">
@@ -1270,7 +1287,7 @@ const App: React.FC = () => {
         );
       }
 
-      case 'help': return <HelpPage />;
+      case 'help': return <HelpPage role={role} />;
       case 'assessment': return <AssessmentPage profile={child} onGameComplete={handleGameComplete} />;
       default: return null;
     }
@@ -1387,6 +1404,81 @@ const App: React.FC = () => {
                 Confirm
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Parent Login Modal ─────────────────────────────────────────── */}
+      {showParentLoginModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-[3rem] p-10 shadow-2xl border-4 border-purple-100 w-full max-w-sm mx-4 animate-pop-in">
+            <div className="text-center mb-6">
+              <div className="text-6xl mb-3">🔐</div>
+              <h3 className="text-2xl font-black text-purple-700">Parent Login</h3>
+              <p className="text-slate-500 font-bold text-sm mt-1">Welcome back! Enter your credentials to access the dashboard.</p>
+            </div>
+            <div className="space-y-4">
+              <input
+                type="email"
+                autoFocus
+                className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-300 outline-none text-gray-900 font-bold text-lg"
+                placeholder="Your email address"
+                value={loginEmail}
+                onChange={e => { setLoginEmail(e.target.value); setLoginError(''); }}
+              />
+              <input
+                type="password"
+                className={`w-full p-5 rounded-[2rem] bg-gray-50 border-4 outline-none text-gray-900 font-bold text-lg ${loginError ? 'border-red-400' : 'border-transparent focus:border-purple-300'}`}
+                placeholder="Your password"
+                value={loginPassword}
+                onChange={e => { setLoginPassword(e.target.value); setLoginError(''); }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const stored = localStorage.getItem(PARENT_CREDENTIALS_KEY);
+                    if (!stored) { setLoginError('No account found. Please register.'); return; }
+                    const creds = JSON.parse(stored);
+                    if (loginEmail.trim().toLowerCase() !== creds.email.toLowerCase()) { setLoginError('Email does not match.'); return; }
+                    if (loginPassword !== creds.password) { setLoginError('Incorrect password.'); return; }
+                    setParent(prev => ({ ...prev, name: creds.name, email: creds.email }));
+                    setShowParentLoginModal(false);
+                    navigateTo('results');
+                  }
+                }}
+              />
+              {loginError && <p className="text-red-500 text-sm font-bold ml-2">⚠ {loginError}</p>}
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setShowParentLoginModal(false); setRole(null); }}
+                className="flex-1 py-4 rounded-[2rem] bg-gray-100 text-gray-600 font-black text-lg hover:bg-gray-200 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const stored = localStorage.getItem(PARENT_CREDENTIALS_KEY);
+                  if (!stored) { setLoginError('No account found. Please register.'); return; }
+                  const creds = JSON.parse(stored);
+                  if (loginEmail.trim().toLowerCase() !== creds.email.toLowerCase()) { setLoginError('Email does not match.'); return; }
+                  if (loginPassword !== creds.password) { setLoginError('Incorrect password.'); return; }
+                  setParent(prev => ({ ...prev, name: creds.name, email: creds.email }));
+                  setShowParentLoginModal(false);
+                  navigateTo('results');
+                }}
+                className="flex-1 py-4 rounded-[2rem] bg-purple-600 text-white font-black text-lg hover:bg-purple-500 transition-all"
+              >
+                Login
+              </button>
+            </div>
+            <p className="text-center text-slate-400 text-xs font-bold mt-4">
+              New user?{' '}
+              <button
+                onClick={() => { setShowParentLoginModal(false); navigateTo('onboarding-parent'); }}
+                className="text-purple-600 underline"
+              >
+                Register here
+              </button>
+            </p>
           </div>
         </div>
       )}
