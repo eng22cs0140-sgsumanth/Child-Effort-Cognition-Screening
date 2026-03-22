@@ -46,3 +46,27 @@ Thumbs.db
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 variables.docx
+*.docx
+
+# ── Root-level loose/temp files ───────────────────────────────────────────────
+3_img.png
+4.jpeg
+5_img.png
+Surveyed Research img 2.jpeg
+Weekly_Progress_Reports.md
+all_images.zip
+all_images/
+
+# ── Research paper files (keep locally, not in repo) ──────────────────────────
+IEEE_Conference_Template.pdf
+IEEE_Paper_Revised.pdf
+IEEE_Paper_Revised.tex
+IEEE_Paper_Revised.log
+IEEEtran.cls
+
+# ── App screenshots (keep locally) ────────────────────────────────────────────
+app_ceci_clinical.png
+app_domain_ceci.png
+app_games_interface.png
+app_results_dashboard.png
+app_screenshots/
