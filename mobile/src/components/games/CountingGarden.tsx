@@ -127,7 +127,7 @@ export default function CountingGarden({ profile, onComplete }: Props) {
 
   const handleGardenEmptyTap = () => {
     const now = Date.now();
-    if (now - lastElementTapTimeRef.current > 20) {
+    if (now - lastElementTapTimeRef.current > 200) {
       const reactionTime = now - lastTapTimeRef.current;
       lastTapTimeRef.current = now;
       tapLog.current.push({ timestamp: now, type: 'empty_space', reactionTime });
@@ -137,7 +137,7 @@ export default function CountingGarden({ profile, onComplete }: Props) {
 
   const handleOptionsEmptyTap = () => {
     const now = Date.now();
-    if (now - lastElementTapTimeRef.current > 20) {
+    if (now - lastElementTapTimeRef.current > 200) {
       const reactionTime = now - lastTapTimeRef.current;
       lastTapTimeRef.current = now;
       tapLog.current.push({ timestamp: now, type: 'empty_space', reactionTime });

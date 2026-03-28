@@ -43,6 +43,16 @@ export default function AssessmentScreen() {
 
   const handleGameEnd = (data: any) => {
     if (activeGame) {
+      const metrics = data.behavioralMetrics;
+      const hasInteractions = metrics
+        ? (metrics.correctAttempts + metrics.incorrectAttempts) > 0
+        : (data.score || 0) > 0;
+
+      if (!hasInteractions) {
+        setActiveGame(null);
+        return;
+      }
+
       const result: GameResult = {
         gameId: activeGame,
         score: data.score || 0,

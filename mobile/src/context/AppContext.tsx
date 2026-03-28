@@ -93,12 +93,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return parseFloat((weightKg / (heightM * heightM)).toFixed(1));
   };
 
+  const getWeekKey = (ts: number): string => {
+    const d = new Date(ts);
+    const oneJan = new Date(d.getFullYear(), 0, 1);
+    const week = Math.ceil((((d.getTime() - oneJan.getTime()) / 86400000) + oneJan.getDay() + 1) / 7);
+    return `${d.getFullYear()}-W${week}`;
+  };
+
   const addResult = (result: GameResult) => {
-    const gameSessionNumber = results.filter(r => r.gameId === result.gameId).length + 1;
+    // Session = all games played within the same calendar week.
+    // Assign the session number based on which week this game was played.
+    const thisWeekKey = getWeekKey(result.timestamp);
+    const orderedUniqueWeeks = results
+      .map(r => getWeekKey(r.timestamp))
+      .filter((w, i, arr) => arr.indexOf(w) === i);
+    const weekIndex = orderedUniqueWeeks.indexOf(thisWeekKey);
+    const sessionNumber = weekIndex >= 0 ? weekIndex + 1 : orderedUniqueWeeks.length + 1;
+
     const enhancedResult: GameResult = {
       ...result,
       behavioralMetrics: result.data?.behavioralMetrics,
-      sessionNumber: gameSessionNumber,
+      sessionNumber,
     };
     setResults(prev => [...prev, enhancedResult]);
   };

@@ -410,8 +410,17 @@ export default function ResultsScreen() {
   const lastSessionDate = hasData
     ? formatDate(Math.max(...results.map(r => r.timestamp)))
     : '—';
-  const totalSessions = results.length;
-  const gamesPlayed = new Set(results.map(r => r.gameId)).size;
+
+  // Session = all games played within the same calendar week
+  const getWeekKey = (ts: number): string => {
+    const d = new Date(ts);
+    const oneJan = new Date(d.getFullYear(), 0, 1);
+    const week = Math.ceil((((d.getTime() - oneJan.getTime()) / 86400000) + oneJan.getDay() + 1) / 7);
+    return `${d.getFullYear()}-W${week}`;
+  };
+  const totalSessions = new Set(results.map(r => getWeekKey(r.timestamp))).size;
+  // Games played = total number of individual games played across all sessions
+  const gamesPlayed = results.length;
 
   // Development summary sentence
   const devSummary = (() => {

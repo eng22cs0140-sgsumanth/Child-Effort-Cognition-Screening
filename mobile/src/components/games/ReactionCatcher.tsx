@@ -116,7 +116,7 @@ export default function ReactionCatcher({ profile, onComplete }: Props) {
 
   const handleEmptySpaceTap = () => {
     const now = Date.now();
-    if (now - lastElementTapTimeRef.current > 20) {
+    if (now - lastElementTapTimeRef.current > 200) {
       const reactionTime = now - lastTapTimeRef.current;
       lastTapTimeRef.current = now;
       tapLog.current.push({ timestamp: now, type: 'empty_space', reactionTime });

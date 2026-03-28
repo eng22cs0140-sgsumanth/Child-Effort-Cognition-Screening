@@ -237,7 +237,7 @@ function DoctorHelp() {
         <View style={[styles.disclaimerCard, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}>
           <Text style={[styles.disclaimerTitle, { color: '#92400E' }]}>⚠️ Clinical Disclaimer</Text>
           <Text style={[styles.disclaimerText, { color: '#78350F' }]}>
-            KidsScreen is a screening instrument, not a diagnostic tool. CECI scores are not equivalent to IQ scores or DSM/ICD diagnostic criteria. Results must always be interpreted in the context of the child's full history, parent report, and clinical examination. A single "Red" band result is not sufficient grounds for diagnosis.
+            KidsScreen is a screening application, not a diagnostic tool. CECI scores are not equivalent to IQ scores or DSM/ICD diagnostic criteria. Results must always be interpreted in the context of the child's full history, parent report, and clinical examination. A single "Red" band result is not sufficient grounds for diagnosis.
           </Text>
         </View>
       </ScrollView>

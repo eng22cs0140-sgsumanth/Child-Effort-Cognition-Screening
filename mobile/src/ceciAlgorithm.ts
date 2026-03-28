@@ -28,8 +28,9 @@ export const calculateTreeBasedScore = (results: GameResult[]): number => {
   const avgEngagement = calculateAverage(metricsArray.map(m => m.engagementScore));
 
   const accuracyScore = avgAccuracy;
-  const reactionScore = Math.max(0, 100 - (avgReactionTime / 50));
-  const hesitationScore = Math.max(0, 100 - (avgHesitation * 10));
+  // If no reaction time data, score is 0 (not 100) — no data means no evidence of good performance
+  const reactionScore = avgReactionTime > 0 ? Math.max(0, 100 - (avgReactionTime / 50)) : 0;
+  const hesitationScore = avgAccuracy > 0 ? Math.max(0, 100 - (avgHesitation * 10)) : 0;
   const engagementScore = avgEngagement;
 
   const weights = {
