@@ -80,6 +80,9 @@ const App: React.FC = () => {
   // Doctor's assigned children
   const [assignedChildren, setAssignedChildren] = useState<any[]>([]);
   const [loadingAssigned, setLoadingAssigned] = useState(false);
+  // Selected patient detail view
+  const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
+  const [patientDetailLoading, setPatientDetailLoading] = useState(false);
 
   // Doctor registration form
   const [drForm, setDrForm] = useState({
@@ -308,6 +311,69 @@ const App: React.FC = () => {
       loadAssignedChildren(firebaseUid);
     }
   }, [section, firebaseUid]);
+
+  const loadPatientDetail = async (kid: any) => {
+    setPatientDetailLoading(true);
+    try {
+      const sessions: AssessmentSession[] = kid.sessions && kid.sessions.length > 0
+        ? kid.sessions
+        : await getSessionsForChild(kid.id);
+
+      // Flatten all game results for scoring
+      const allResults: GameResult[] = sessions.flatMap((s: AssessmentSession) => s.results || []);
+
+      // Compute category scores
+      const cats = {
+        cognitive: { games: ['memory', 'numbersequencer', 'counting', 'maze'], total: 0, count: 0 },
+        social: { games: ['emotion', 'leader'], total: 0, count: 0 },
+        language: { games: ['sound'], total: 0, count: 0 },
+        attention: { games: ['simon', 'category', 'catcher'], total: 0, count: 0 },
+      };
+      allResults.forEach(r => {
+        Object.keys(cats).forEach(k => {
+          const c = cats[k as keyof typeof cats];
+          if (c.games.includes(r.gameId)) { c.total += Math.min(100, r.score); c.count++; }
+        });
+      });
+      const ptScores = {
+        cognitive: cats.cognitive.count > 0 ? Math.round(cats.cognitive.total / cats.cognitive.count) : 0,
+        social: cats.social.count > 0 ? Math.round(cats.social.total / cats.social.count) : 0,
+        language: cats.language.count > 0 ? Math.round(cats.language.total / cats.language.count) : 0,
+        attention: cats.attention.count > 0 ? Math.round(cats.attention.total / cats.attention.count) : 0,
+      };
+
+      const ptDomainIndices = allResults.length > 0 ? computeDomainIndices(allResults) : { VMI: 0, FRI: 0, LCI: 0, IFI: 0, API: 0, ATI: 0 };
+      const ptTotal = sessions.length;
+
+      let ptCeciAnalysis: CECIResult | null = null;
+      let ptCeciParams = { pid: 0, varAcc: 0, peff: 0, insufficientData: true };
+
+      if (allResults.length > 0) {
+        const prevSess = sessions.slice(0, -1);
+        const latestResults = sessions[sessions.length - 1]?.results || allResults;
+        ptCeciParams = estimateCECIParametersFromSessions(prevSess, latestResults);
+        const allAccs = sessions.map((s: AssessmentSession) => s.sessionAccuracy);
+        try {
+          ptCeciAnalysis = await getCECIBreakdown(ptCeciParams.pid, ptCeciParams.varAcc, ptCeciParams.peff, allAccs, !ptCeciParams.insufficientData);
+        } catch {}
+      }
+
+      setSelectedPatient({
+        child: kid,
+        sessions,
+        allResults,
+        ptScores,
+        ptDomainIndices,
+        ptTotal,
+        ptCeciAnalysis,
+        ptCeciParams,
+      });
+    } catch (e) {
+      console.warn('Failed to load patient detail:', e);
+    } finally {
+      setPatientDetailLoading(false);
+    }
+  };
 
   // Load session history from localStorage on mount.
   // If URL contains ?clearSessions=1, wipe stored history first (used by clear-sessions.sh).
@@ -585,7 +651,8 @@ const App: React.FC = () => {
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Assessment_Report_${child.name || 'Child'}.pdf`);
+      const reportName = selectedPatient ? selectedPatient.child.name : child.name;
+      pdf.save(`Assessment_Report_${reportName || 'Child'}.pdf`);
 
       element.style.display = 'none';
       alert('Report generated successfully!');
@@ -748,6 +815,272 @@ const App: React.FC = () => {
         );
 
       case 'doctor-dashboard':
+        // ── PATIENT DETAIL VIEW ────────────────────────────────────────────
+        if (selectedPatient) {
+          const pt = selectedPatient;
+          const ptChild = pt.child;
+          const ptCx = 200, ptCy = 200, ptR = 130;
+          const ptGetPt = (val: number, angle: number) => {
+            const r = (Math.max(5, val) / 100) * ptR;
+            return { x: ptCx + r * Math.sin((angle * Math.PI) / 180), y: ptCy - r * Math.cos((angle * Math.PI) / 180) };
+          };
+          const ptRadarPoints = [
+            ptGetPt(pt.ptScores.cognitive, 0), ptGetPt(pt.ptScores.social, 90),
+            ptGetPt(pt.ptScores.language, 180), ptGetPt(pt.ptScores.attention, 270),
+          ];
+          const ptRadarPath = ptRadarPoints.map((p: any) => `${p.x},${p.y}`).join(' ');
+
+          return (
+            <div className="container mx-auto px-6 py-10 max-w-7xl animate-pop-in">
+              <header className="mb-8 flex items-center gap-4">
+                <button
+                  onClick={() => setSelectedPatient(null)}
+                  className="bg-gray-100 text-gray-600 font-black px-5 py-3 rounded-2xl hover:bg-gray-200 flex items-center gap-2"
+                >← Back</button>
+                <div>
+                  <h1 className="text-4xl font-black text-slate-800">Clinical Dashboard</h1>
+                  <p className="text-slate-500 font-bold text-xl">Patient: {ptChild.name || 'Anonymous'}</p>
+                </div>
+                <div className="ml-auto bg-emerald-100 text-emerald-700 px-6 py-3 rounded-2xl font-black flex items-center gap-2 border-2 border-emerald-200">
+                  <span className="animate-pulse">●</span> LIVE CLINICAL MODE
+                </div>
+              </header>
+
+              {pt.allResults.length > 0 && pt.ptCeciAnalysis?.riskBand === 'red' && (
+                <div className="bg-red-50 border-2 border-red-300 rounded-3xl p-6 mb-8 flex items-center gap-5">
+                  <span className="text-4xl">🚨</span>
+                  <div>
+                    <p className="text-red-800 font-black text-xl">High Risk Alert — Specialist Referral Recommended</p>
+                    <p className="text-red-600 font-bold text-sm mt-1">CECI score indicates persistent cognitive difficulty patterns.</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Sidebar */}
+                <div className="lg:col-span-4 space-y-6">
+                  <div className="bg-gradient-to-br from-purple-600 to-indigo-600 p-6 rounded-[2.5rem] shadow-xl text-white">
+                    <p className="text-purple-200 font-black text-xs uppercase tracking-widest mb-1">Longitudinal Monitoring</p>
+                    <div className="flex items-end gap-3">
+                      <span className="text-5xl font-black">{pt.ptTotal}</span>
+                      <span className="text-purple-200 font-bold text-lg mb-1">Session{pt.ptTotal !== 1 ? 's' : ''} Recorded</span>
+                    </div>
+                    {pt.ptTotal === 0 && <p className="text-purple-300 text-xs font-bold mt-2">No games played yet</p>}
+                    {pt.ptTotal === 1 && <p className="text-purple-300 text-xs font-bold mt-2">Play games in another visit to enable cross-session Var(Acc) analysis</p>}
+                    {pt.ptTotal >= 2 && <p className="text-purple-300 text-xs font-bold mt-2">Multi-session CECI active — Var(Acc) computed across {pt.ptTotal} sessions</p>}
+                  </div>
+
+                  <div className="bg-white p-8 rounded-[3rem] shadow-xl border-2 border-slate-100">
+                    <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2"><span className="text-2xl">👤</span> Child Profile</h3>
+                    <div className="space-y-3">
+                      {[
+                        { label: 'Age', value: `${ptChild.age} yrs`, icon: '🎂', color: 'text-blue-500' },
+                        { label: 'Sex', value: ptChild.sex ? (ptChild.sex === 'male' ? 'Boy' : ptChild.sex === 'female' ? 'Girl' : 'Other') : 'N/A', icon: ptChild.sex === 'male' ? '👦' : ptChild.sex === 'female' ? '👧' : '⚧', color: 'text-purple-500' },
+                        { label: 'Birth', value: ptChild.isPremature ? `Premature (${ptChild.gestationalAgeWeeks || '?'} wks)` : ptChild.isPremature === false ? 'Full-term' : 'Not specified', icon: '🏥', color: ptChild.isPremature ? 'text-orange-500' : 'text-green-500' },
+                        { label: 'Family History', value: ptChild.familyHistoryOfDD ? 'ASD/ADHD/ID reported' : ptChild.familyHistoryOfDD === false ? 'None reported' : 'Not specified', icon: '🧬', color: ptChild.familyHistoryOfDD ? 'text-red-500' : 'text-slate-500' },
+                        ...(ptChild.knownConditions ? [{ label: 'Conditions', value: ptChild.knownConditions, icon: '📋', color: 'text-amber-600' }] : []),
+                      ].map((stat: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 gap-3">
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="text-xl">{stat.icon}</span>
+                            <span className="text-sm font-black text-slate-400 uppercase">{stat.label}</span>
+                          </div>
+                          <span className={`text-sm font-black ${stat.color} text-right`}>{stat.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-8 rounded-[3rem] shadow-xl border-2 border-slate-100">
+                    <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2"><span>📒</span> Parent Observations</h3>
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                      {(ptChild.observations || []).length === 0 ? (
+                        <p className="text-slate-400 font-bold italic text-center py-4">No diary entries available.</p>
+                      ) : (
+                        (ptChild.observations as any[]).map((obs: any) => (
+                          <div key={obs.id} className="bg-slate-50 p-5 rounded-2xl border-l-8 border-orange-300 relative">
+                            <div className="text-[10px] text-slate-300 font-black absolute top-2 right-4 uppercase">{new Date(obs.timestamp).toLocaleDateString()}</div>
+                            <p className="text-slate-700 font-bold text-sm pt-2">{obs.text}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Main analysis */}
+                <div className="lg:col-span-8 space-y-8">
+                  {/* Radar */}
+                  <div className="bg-white p-10 rounded-[4rem] shadow-xl border-2 border-slate-100">
+                    <div className="flex justify-between items-center mb-8">
+                      <h2 className="text-2xl font-black text-slate-800">Developmental Performance</h2>
+                      <div className="flex gap-2 flex-wrap">
+                        {Object.entries(pt.ptScores).map(([key, val]) => (
+                          <div key={key} className="px-3 py-1 bg-slate-100 rounded-full text-[10px] font-black uppercase text-slate-500">{key}: {val as number}%</div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex justify-center">
+                      <svg width="350" height="350" viewBox="0 0 400 400" className="overflow-visible drop-shadow-2xl">
+                        {[20, 40, 60, 80, 100].map(r => (
+                          <circle key={r} cx="200" cy="200" r={(r/100) * ptR} fill="none" stroke="#F1F5F9" strokeWidth="1" />
+                        ))}
+                        {[0, 90, 180, 270].map(a => {
+                          const p = ptGetPt(100, a);
+                          return <line key={a} x1="200" y1="200" x2={p.x} y2={p.y} stroke="#F1F5F9" strokeWidth="1" />;
+                        })}
+                        <polygon points={ptRadarPath} fill="rgba(99,102,241,0.2)" stroke="#6366f1" strokeWidth="4" strokeLinejoin="round" />
+                        {ptRadarPoints.map((p: any, i: number) => <circle key={i} cx={p.x} cy={p.y} r="5" fill="#6366f1" />)}
+                        <text x="200" y="-10" textAnchor="middle" className="text-[12px] font-black fill-slate-400 uppercase">Cognitive</text>
+                        <text x="360" y="200" textAnchor="start" className="text-[12px] font-black fill-slate-400 uppercase">Social</text>
+                        <text x="200" y="410" textAnchor="middle" className="text-[12px] font-black fill-slate-400 uppercase">Language</text>
+                        <text x="40" y="200" textAnchor="end" className="text-[12px] font-black fill-slate-400 uppercase">Attention</text>
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Domain Indices */}
+                  <div className="bg-white p-10 rounded-[4rem] shadow-xl border-2 border-slate-100">
+                    <div className="mb-8">
+                      <h2 className="text-2xl font-black text-slate-800">Domain Assessment Indices</h2>
+                      <p className="text-slate-400 font-bold text-sm mt-1">Neuropsychological domain scores derived from game telemetry</p>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {([
+                        { label: 'VMI', full: 'Visual-Motor Integration', key: 'VMI', bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700', sub: 'text-blue-400', val: 'text-blue-900', bar: 'bg-blue-500' },
+                        { label: 'FRI', full: 'Fluid Reasoning Index', key: 'FRI', bg: 'bg-violet-50', border: 'border-violet-100', text: 'text-violet-700', sub: 'text-violet-400', val: 'text-violet-900', bar: 'bg-violet-500' },
+                        { label: 'LCI', full: 'Language Comprehension', key: 'LCI', bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', sub: 'text-emerald-400', val: 'text-emerald-900', bar: 'bg-emerald-500' },
+                        { label: 'IFI', full: 'Inhibitory Function', key: 'IFI', bg: 'bg-orange-50', border: 'border-orange-100', text: 'text-orange-700', sub: 'text-orange-400', val: 'text-orange-900', bar: 'bg-orange-500' },
+                        { label: 'API', full: 'Attention Processing', key: 'API', bg: 'bg-rose-50', border: 'border-rose-100', text: 'text-rose-700', sub: 'text-rose-400', val: 'text-rose-900', bar: 'bg-rose-500' },
+                        { label: 'ATI', full: 'Attention-Task Integration', key: 'ATI', bg: 'bg-indigo-50', border: 'border-indigo-100', text: 'text-indigo-700', sub: 'text-indigo-400', val: 'text-indigo-900', bar: 'bg-indigo-500' },
+                      ]).map((idx: any) => (
+                        <div key={idx.label} className={`${idx.bg} p-5 rounded-3xl border ${idx.border}`}>
+                          <div className={`${idx.text} font-black text-lg`}>{idx.label}</div>
+                          <div className={`${idx.sub} text-[10px] font-bold uppercase tracking-wide mb-2`}>{idx.full}</div>
+                          <div className={`${idx.val} font-black text-3xl mb-2`}>{pt.ptDomainIndices[idx.key]}<span className="text-sm font-bold ml-0.5">%</span></div>
+                          <div className="w-full bg-white/60 rounded-full h-1.5">
+                            <div className={`${idx.bar} h-1.5 rounded-full transition-all duration-700`} style={{ width: `${pt.ptDomainIndices[idx.key]}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* CECI Analysis */}
+                  <div className="bg-white p-10 rounded-[4rem] shadow-xl border-2 border-slate-100">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                      <div>
+                        <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3"><span>🧠</span> CECI Screening Analysis</h3>
+                        <p className="text-slate-400 font-bold text-sm">Child Effort-Cognition Index · {pt.ptTotal} session{pt.ptTotal !== 1 ? 's' : ''} recorded</p>
+                      </div>
+                      {pt.allResults.length > 0 && (
+                        <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                          <div className="text-right">
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Index Score</div>
+                            <div className="text-3xl font-black text-slate-800">{pt.ptCeciAnalysis?.ceciScore.toFixed(3) || '—'}</div>
+                          </div>
+                          <div className="px-5 py-2 rounded-xl text-white font-black text-sm shadow-md" style={{ backgroundColor: pt.ptCeciAnalysis?.riskColor || '#cbd5e1' }}>
+                            {pt.ptCeciAnalysis?.riskLabel || 'Calculating...'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {pt.allResults.length === 0 ? (
+                      <div className="bg-slate-50 border-2 border-dashed border-slate-200 p-8 rounded-3xl text-center">
+                        <p className="text-slate-500 font-black text-lg mb-2">🎮 No Games Played Yet</p>
+                      </div>
+                    ) : pt.ptCeciParams.insufficientData ? (
+                      <div className="bg-amber-50 border-2 border-dashed border-amber-200 p-6 rounded-3xl text-center">
+                        <p className="text-amber-700 font-black text-lg mb-1">⚠️ Insufficient Data for Full Analysis</p>
+                        <p className="text-amber-600 text-sm font-bold">At least 2 assessment sessions are required.</p>
+                      </div>
+                    ) : pt.ptCeciAnalysis ? (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        {[
+                          { label: 'PID', value: pt.ptCeciAnalysis.components.pid.value, color: 'blue', interpretation: pt.ptCeciAnalysis.components.pid.interpretation },
+                          { label: 'Consistency', value: pt.ptCeciAnalysis.components.consistency.value, color: 'emerald', interpretation: pt.ptCeciAnalysis.components.consistency.interpretation },
+                          { label: 'Effort', value: pt.ptCeciAnalysis.components.effort.value, color: 'orange', interpretation: pt.ptCeciAnalysis.components.effort.interpretation },
+                        ].map((comp: any, i: number) => (
+                          <div key={i} className={`bg-${comp.color}-50 p-6 rounded-3xl border border-${comp.color}-100`}>
+                            <div className={`text-${comp.color}-700 font-black uppercase text-[10px] tracking-widest mb-2`}>{comp.label}</div>
+                            <div className={`text-2xl font-black text-${comp.color}-900 mb-1`}>{(comp.value * 100).toFixed(1)}%</div>
+                            <p className={`text-${comp.color}-600 text-[10px] font-bold leading-tight`}>{comp.interpretation}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {pt.allResults.length > 0 && pt.ptCeciAnalysis && (
+                      <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                        <h4 className="text-sm font-black text-slate-800 mb-2 flex items-center gap-2"><span>📋</span> Clinical Interpretation Note</h4>
+                        <p className="text-slate-600 font-bold text-sm leading-relaxed italic">"{pt.ptCeciAnalysis.clinicalNote}"</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Official Assessment Form */}
+                  <div className="bg-slate-800 p-10 rounded-[4rem] shadow-2xl text-white">
+                    <h4 className="font-black text-2xl mb-8 flex items-center gap-3">
+                      <span className="bg-white/10 p-3 rounded-2xl">🩺</span> Official Clinical Assessment
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Examiner Name</label>
+                        <input type="text" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.examinerName} onChange={e => setDoctorForm({...doctorForm, examinerName: e.target.value})} placeholder="Dr. Name" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Case Number</label>
+                        <input type="text" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.caseNo} onChange={e => setDoctorForm({...doctorForm, caseNo: e.target.value})} />
+                      </div>
+                      <div className="col-span-full">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Referral Source</label>
+                        <input type="text" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all mb-4"
+                          value={doctorForm.referralSource} onChange={e => setDoctorForm({...doctorForm, referralSource: e.target.value})} placeholder="Who referred the child?" />
+                        <textarea className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.presentingComplaints} onChange={e => setDoctorForm({...doctorForm, presentingComplaints: e.target.value})}
+                          placeholder="Presenting complaints..." rows={2} />
+                      </div>
+                      <div className="col-span-full">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Behavioral Observations</label>
+                        <textarea className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.behaviorNotes} onChange={e => setDoctorForm({...doctorForm, behaviorNotes: e.target.value})}
+                          placeholder="How was the child during the session?" rows={2} />
+                      </div>
+                      <div className="col-span-full">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Tentative Diagnosis</label>
+                        <input type="text" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.diagnosis} onChange={e => setDoctorForm({...doctorForm, diagnosis: e.target.value})} placeholder="Diagnosis code or description" />
+                      </div>
+                      <div className="col-span-full">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Clinical Findings & Notes</label>
+                        <textarea className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none min-h-[140px] font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.notes} onChange={e => setDoctorForm({...doctorForm, notes: e.target.value})} placeholder="Detailed clinical findings..." />
+                      </div>
+                      <div className="col-span-full">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-2 tracking-widest">Recommendations (one per line)</label>
+                        <textarea className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none font-bold text-white focus:border-emerald-400 transition-all"
+                          value={doctorForm.recommendations} onChange={e => setDoctorForm({...doctorForm, recommendations: e.target.value})}
+                          placeholder="1. Recommendation one&#10;2. Recommendation two..." rows={3} />
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleDownloadReport}
+                      disabled={isGeneratingPdf || !doctorForm.examinerName}
+                      className="w-full bg-emerald-500 text-white py-6 rounded-[2rem] font-black text-2xl shadow-xl flex items-center justify-center gap-4 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isGeneratingPdf ? 'GENERATING PDF...' : 'SUBMIT & PRINT PDF REPORT 📄'}
+                    </button>
+                    {!doctorForm.examinerName && <p className="text-center text-emerald-400 text-xs font-bold mt-4">Please enter Examiner Name to enable printing</p>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="container mx-auto px-4 py-10 max-w-2xl">
             <div className="flex justify-between items-center mb-6">
@@ -816,6 +1149,14 @@ const App: React.FC = () => {
                 </button>
               </div>
 
+              {patientDetailLoading && (
+                <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-3xl p-8 shadow-2xl text-center">
+                    <div className="text-5xl mb-4 animate-bounce">🩺</div>
+                    <p className="font-black text-purple-700 text-lg">Loading patient data...</p>
+                  </div>
+                </div>
+              )}
               {loadingAssigned ? (
                 <p className="text-center text-gray-400 font-semibold text-sm py-6">Loading patients...</p>
               ) : assignedChildren.length === 0 ? (
@@ -836,7 +1177,11 @@ const App: React.FC = () => {
                       green: 'Typical', amber: 'Monitor', red: 'High Risk',
                     };
                     return (
-                      <div key={kid.id} className="bg-white border-2 border-gray-100 rounded-2xl p-4 shadow-sm">
+                      <div
+                        key={kid.id}
+                        className="bg-white border-2 border-gray-100 rounded-2xl p-4 shadow-sm cursor-pointer hover:border-purple-300 hover:shadow-md transition-all"
+                        onClick={() => loadPatientDetail(kid)}
+                      >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-2xl">
@@ -865,6 +1210,9 @@ const App: React.FC = () => {
                             </div>
                           </div>
                         )}
+                        <div className="mt-3 pt-2 border-t border-gray-100 flex justify-end">
+                          <span className="text-xs font-black text-purple-500">View Clinical Dashboard →</span>
+                        </div>
                       </div>
                     );
                   })}
