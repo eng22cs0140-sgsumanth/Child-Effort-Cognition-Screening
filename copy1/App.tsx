@@ -24,14 +24,16 @@ import {
   updateChildProfile,
   saveGameResult,
   getSessionsForChild,
+  getChildrenForDoctor,
   getPendingDoctors,
   getApprovedDoctors,
   approveDoctor,
   rejectDoctor,
   registerDoctor,
-  findDoctorByProfessionalId,
   assignChildToDoctor,
   getWeekKey,
+  generateDoctorOtp,
+  linkChildViaDoctorOtp,
 } from './services/firebaseService';
 import emailjs from '@emailjs/browser';
 
@@ -67,10 +69,17 @@ const App: React.FC = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
 
-  // Doctor link
-  const [doctorIdInput, setDoctorIdInput] = useState('');
+  // Doctor link via OTP
+  const [doctorOtp, setDoctorOtp] = useState('');
   const [doctorLinkError, setDoctorLinkError] = useState('');
   const [doctorLinkLoading, setDoctorLinkLoading] = useState(false);
+  // Doctor dashboard OTP generation
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  // Doctor's assigned children
+  const [assignedChildren, setAssignedChildren] = useState<any[]>([]);
+  const [loadingAssigned, setLoadingAssigned] = useState(false);
 
   // Doctor registration form
   const [drForm, setDrForm] = useState({
@@ -244,9 +253,11 @@ const App: React.FC = () => {
               const { id, parentUid, assignedDoctorUid, ...childData } = kids[0] as any;
               setChild(prev => ({ ...prev, ...childData }));
               setChildId(id);
+              setSection('results');
+            } else {
+              // New parent — no child yet, prompt setup
+              setSection('onboarding-child');
             }
-
-            setSection('results');
           } else if (userRole === 'doctor') {
             const docProfile = await getDoctorProfile(user.uid);
             if (docProfile) {
@@ -271,6 +282,32 @@ const App: React.FC = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // Load assigned children when doctor dashboard is active
+  const loadAssignedChildren = async (uid: string) => {
+    setLoadingAssigned(true);
+    try {
+      const kids = await getChildrenForDoctor(uid);
+      const withSessions = await Promise.all(
+        kids.map(async (kid: any) => {
+          const sessions = await getSessionsForChild(kid.id);
+          const last = sessions[sessions.length - 1] as any;
+          return { ...kid, sessions, latestBand: last?.ceciScore?.riskBand };
+        })
+      );
+      setAssignedChildren(withSessions);
+    } catch (e) {
+      console.warn('Failed to load assigned children:', e);
+    } finally {
+      setLoadingAssigned(false);
+    }
+  };
+
+  useEffect(() => {
+    if (section === 'doctor-dashboard' && firebaseUid) {
+      loadAssignedChildren(firebaseUid);
+    }
+  }, [section, firebaseUid]);
 
   // Load session history from localStorage on mount.
   // If URL contains ?clearSessions=1, wipe stored history first (used by clear-sessions.sh).
@@ -373,9 +410,20 @@ const App: React.FC = () => {
     if (!loginEmail || !loginPassword) { setLoginError('Enter email and password.'); return; }
     try {
       const uid = await loginDoctor(loginEmail.trim().toLowerCase(), loginPassword);
+      const userRole = await getUserRole(uid);
+
+      // Admin logging in through doctor modal
+      if (userRole === 'admin') {
+        setShowParentLoginModal(false);
+        setRole('admin');
+        navigateTo('admin-dashboard');
+        return;
+      }
+
       const docProfile = await getDoctorProfile(uid);
-      if (!docProfile) { setLoginError('No professional profile found.'); return; }
+      if (!docProfile) { setLoginError('No professional profile found. Please register first.'); return; }
       setDoctor(docProfile);
+      setRole('doctor');
       setShowParentLoginModal(false);
       if (docProfile.status === 'pending') navigateTo('doctor-pending');
       else if (docProfile.status === 'rejected') {
@@ -384,7 +432,12 @@ const App: React.FC = () => {
         navigateTo('doctor-dashboard');
       }
     } catch (err: any) {
-      setLoginError('Login failed. Please try again.');
+      const code = err?.code || '';
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setLoginError('Incorrect email or password.');
+      } else {
+        setLoginError('Login failed. Please try again.');
+      }
     }
   };
 
@@ -471,20 +524,20 @@ const App: React.FC = () => {
     }
   };
 
-  const handleFindAndLinkDoctor = async () => {
-    if (!doctorIdInput.trim()) { setDoctorLinkError('Enter a doctor professional ID.'); return; }
+  const handleLinkViaOtp = async () => {
+    if (!doctorOtp.trim() || doctorOtp.trim().length !== 6) {
+      setDoctorLinkError('Enter the 6-digit OTP from your doctor.');
+      return;
+    }
     if (!childId) { setDoctorLinkError('Save child profile first.'); return; }
     setDoctorLinkLoading(true);
     setDoctorLinkError('');
     try {
-      const doc = await findDoctorByProfessionalId(doctorIdInput.trim());
-      if (!doc) { setDoctorLinkError('No approved doctor found with that ID.'); return; }
-      await assignChildToDoctor(childId, doc.uid);
-      setDoctorLinkError('');
-      setDoctorIdInput('');
-      alert(`${child.name} successfully linked to ${doc.role} ${doc.fullName} at ${doc.hospital}.`);
-    } catch {
-      setDoctorLinkError('Failed to link. Please try again.');
+      const doc = await linkChildViaDoctorOtp(doctorOtp.trim(), childId);
+      setDoctorOtp('');
+      alert(`✅ ${child.name} is now linked to ${doc.role} ${doc.fullName} at ${doc.hospital}.`);
+    } catch (e: any) {
+      setDoctorLinkError(e.message || 'Failed to link. Please try again.');
     } finally {
       setDoctorLinkLoading(false);
     }
@@ -707,11 +760,117 @@ const App: React.FC = () => {
                 Sign Out
               </button>
             </div>
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 mb-4">
               <p className="font-bold text-blue-800 mb-1">Professional ID: <span className="text-purple-700">{doctor?.doctorId}</span></p>
-              <p className="text-sm text-blue-600">Share this ID with parents to link their child's records to you.</p>
+              <p className="text-sm text-blue-600">Generate a one-time OTP and share it with the parent to link their child.</p>
             </div>
-            <p className="text-center text-gray-400 mt-6 font-semibold">Assigned patients will appear here once parents link their child to your ID.</p>
+
+            {/* OTP Generation */}
+            <div className="bg-white border-2 border-green-200 rounded-2xl p-6 mb-4">
+              <p className="font-black text-green-800 mb-3">🔑 Generate Parent Link OTP</p>
+              {generatedOtp ? (
+                <div className="text-center">
+                  <p className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">Share this code with the parent</p>
+                  <div className="bg-green-50 border-2 border-green-300 rounded-2xl py-4 px-6 mb-3 select-all cursor-pointer">
+                    <p className="text-5xl font-black text-green-700 tracking-[0.3em]">{generatedOtp}</p>
+                  </div>
+                  <p className="text-xs text-gray-400 font-semibold mb-3">Valid for 24 hours • Single use</p>
+                  <button
+                    onClick={async () => {
+                      setOtpLoading(true); setOtpError('');
+                      try { const o = await generateDoctorOtp(firebaseUid!); setGeneratedOtp(o); }
+                      catch (e: any) { setOtpError(e.message || 'Failed to generate OTP.'); }
+                      finally { setOtpLoading(false); }
+                    }}
+                    disabled={otpLoading}
+                    className="bg-gray-100 text-gray-600 font-bold px-6 py-2 rounded-full text-sm"
+                  >
+                    {otpLoading ? 'Generating...' : '↺ Generate New OTP'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={async () => {
+                    setOtpLoading(true); setOtpError('');
+                    try { const o = await generateDoctorOtp(firebaseUid!); setGeneratedOtp(o); }
+                    catch (e: any) { setOtpError(e.message || 'Failed to generate OTP.'); }
+                    finally { setOtpLoading(false); }
+                  }}
+                  disabled={otpLoading || !firebaseUid}
+                  className="w-full bg-green-500 text-white font-black py-4 rounded-2xl hover:bg-green-600 disabled:opacity-60"
+                >
+                  {otpLoading ? 'Generating...' : '🔑 Generate OTP for Parent'}
+                </button>
+              )}
+              {otpError && <p className="text-red-500 text-xs font-bold mt-3 text-center">⚠ {otpError}</p>}
+            </div>
+            {/* Assigned Patients */}
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-black text-gray-700 text-base">My Patients ({assignedChildren.length})</h3>
+                <button
+                  onClick={() => firebaseUid && loadAssignedChildren(firebaseUid)}
+                  className="text-purple-600 font-bold text-sm bg-purple-50 px-3 py-1.5 rounded-full hover:bg-purple-100"
+                >
+                  {loadingAssigned ? '...' : '🔄 Refresh'}
+                </button>
+              </div>
+
+              {loadingAssigned ? (
+                <p className="text-center text-gray-400 font-semibold text-sm py-6">Loading patients...</p>
+              ) : assignedChildren.length === 0 ? (
+                <div className="bg-gray-50 rounded-2xl p-6 text-center border-2 border-dashed border-gray-200">
+                  <p className="text-4xl mb-2">👶</p>
+                  <p className="text-gray-500 font-bold text-sm">No patients yet</p>
+                  <p className="text-gray-400 text-xs mt-1">Generate an OTP above and share it with a parent to link their child.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {assignedChildren.map((kid: any) => {
+                    const bandColors: Record<string, string> = {
+                      green: 'bg-green-100 text-green-700',
+                      amber: 'bg-yellow-100 text-yellow-700',
+                      red: 'bg-red-100 text-red-700',
+                    };
+                    const bandLabels: Record<string, string> = {
+                      green: 'Typical', amber: 'Monitor', red: 'High Risk',
+                    };
+                    return (
+                      <div key={kid.id} className="bg-white border-2 border-gray-100 rounded-2xl p-4 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-2xl">
+                              {kid.sex === 'female' ? '👧' : '👦'}
+                            </div>
+                            <div>
+                              <p className="font-black text-gray-800">{kid.name}</p>
+                              <p className="text-gray-400 text-xs font-semibold">Age {kid.age} • {kid.sessions.length} session{kid.sessions.length !== 1 ? 's' : ''}</p>
+                            </div>
+                          </div>
+                          {kid.latestBand && (
+                            <span className={`text-xs font-black px-3 py-1 rounded-full ${bandColors[kid.latestBand] || 'bg-gray-100 text-gray-500'}`}>
+                              {bandLabels[kid.latestBand] || kid.latestBand}
+                            </span>
+                          )}
+                        </div>
+                        {kid.sessions.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-100">
+                            <p className="text-xs text-gray-400 font-semibold mb-1">Recent sessions:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {kid.sessions.slice(-3).map((s: any, i: number) => (
+                                <span key={i} className="bg-purple-50 text-purple-700 text-xs font-bold px-2 py-1 rounded-lg">
+                                  Session {s.sessionNumber} — {Math.round((s.sessionAccuracy || 0) * 100)}%
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         );
 
@@ -1414,20 +1573,22 @@ const App: React.FC = () => {
                     📧 Send Weekly Report
                   </button>
 
-                  {/* Link to Doctor */}
+                  {/* Link to Doctor via OTP */}
                   <div className="bg-white rounded-[2rem] border-2 border-slate-100 p-4 shadow">
-                    <p className="text-slate-700 font-black text-sm mb-2">🩺 Link to Doctor</p>
+                    <p className="text-slate-700 font-black text-sm mb-1">🩺 Link to Doctor</p>
+                    <p className="text-slate-400 text-xs font-semibold mb-3">Ask your doctor for a 6-digit OTP code</p>
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        value={doctorIdInput}
-                        onChange={e => { setDoctorIdInput(e.target.value); setDoctorLinkError(''); }}
-                        placeholder="Enter doctor's professional ID"
-                        className="flex-1 px-4 py-3 rounded-2xl bg-gray-50 border-2 border-transparent focus:border-purple-300 outline-none font-semibold text-gray-700 text-sm"
+                        value={doctorOtp}
+                        onChange={e => { setDoctorOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setDoctorLinkError(''); }}
+                        placeholder="Enter 6-digit OTP"
+                        maxLength={6}
+                        className="flex-1 px-4 py-3 rounded-2xl bg-gray-50 border-2 border-transparent focus:border-purple-300 outline-none font-black text-gray-700 text-lg tracking-widest text-center"
                       />
                       <button
-                        onClick={handleFindAndLinkDoctor}
-                        disabled={doctorLinkLoading}
+                        onClick={handleLinkViaOtp}
+                        disabled={doctorLinkLoading || doctorOtp.length !== 6}
                         className="bg-green-500 text-white px-4 py-3 rounded-2xl font-black text-sm hover:bg-green-600 disabled:opacity-60"
                       >
                         {doctorLinkLoading ? '...' : 'Link'}

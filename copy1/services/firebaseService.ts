@@ -403,3 +403,48 @@ export async function loginDoctor(email: string, password: string): Promise<stri
   const cred = await signInWithEmailAndPassword(auth, email, password);
   return cred.user.uid;
 }
+
+// ---------------------------------------------------------------------------
+// OTP-based doctor-parent linking
+// ---------------------------------------------------------------------------
+
+export async function generateDoctorOtp(doctorUid: string): Promise<string> {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+  // Write the OTP document (doc ID = the OTP code for direct lookup)
+  await setDoc(doc(db, 'doctorOtps', otp), {
+    doctorUid,
+    expiresAt: expiresAt.toISOString(),
+    used: false,
+    createdAt: serverTimestamp(),
+  });
+
+  // Store the active OTP code on the doctor's doc for reference
+  await updateDoc(doc(db, 'doctors', doctorUid), { activeOtp: otp });
+
+  return otp;
+}
+
+export async function linkChildViaDoctorOtp(
+  otp: string,
+  childId: string
+): Promise<DoctorProfile> {
+  const otpSnap = await getDoc(doc(db, 'doctorOtps', otp.trim()));
+  if (!otpSnap.exists()) throw new Error('Invalid OTP. Please check and try again.');
+
+  const data = otpSnap.data();
+  if (data.used) throw new Error('This OTP has already been used.');
+
+  const expiresAt = data.expiresAt instanceof Timestamp
+    ? data.expiresAt.toMillis()
+    : new Date(data.expiresAt as string).getTime();
+  if (Date.now() > expiresAt) throw new Error('OTP has expired. Ask your doctor to generate a new one.');
+
+  await assignChildToDoctor(childId, data.doctorUid);
+  await updateDoc(doc(db, 'doctorOtps', otp.trim()), { used: true });
+
+  const docProfile = await getDoctorProfile(data.doctorUid);
+  if (!docProfile) throw new Error('Doctor profile not found.');
+  return docProfile;
+}

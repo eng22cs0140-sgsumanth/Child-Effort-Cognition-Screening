@@ -76,9 +76,22 @@ service cloud.firestore {
     // -----------------------------------------------------------------------
     match /doctors/{uid} {
       allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
-      // Doctors can create and update their own doc; only admin can change status
       allow create: if request.auth != null && request.auth.uid == uid;
       allow update: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow delete: if request.auth != null && isAdmin();
+    }
+
+    // -----------------------------------------------------------------------
+    // doctorOtps collection
+    //   - Approved doctor can create/update their own OTPs
+    //   - Any authenticated user can read (to verify OTP during linking)
+    //   - Only the system (via a parent's auth) can mark as used
+    // -----------------------------------------------------------------------
+    match /doctorOtps/{otp} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && isApprovedDoctor(request.auth.uid)
+                    && request.resource.data.doctorUid == request.auth.uid;
+      allow update: if request.auth != null;
       allow delete: if request.auth != null && isAdmin();
     }
   }

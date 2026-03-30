@@ -15,7 +15,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { COLORS } from '../constants';
 import { useApp } from '../context/AppContext';
-import { getChildrenForDoctor, getSessionsForChild } from '../services/firebaseService';
+import { getChildrenForDoctor, getSessionsForChild, generateDoctorOtp } from '../services/firebaseService';
 import { ChildProfile, AssessmentSession } from '../types';
 
 type NavProp = StackNavigationProp<RootStackParamList, 'DoctorDashboard'>;
@@ -39,6 +39,21 @@ export default function DoctorDashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedChild, setSelectedChild] = useState<ChildWithSessions | null>(null);
+  const [generatedOtp, setGeneratedOtp] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+
+  const handleGenerateOtp = async () => {
+    if (!firebaseUid) return;
+    setOtpLoading(true);
+    try {
+      const otp = await generateDoctorOtp(firebaseUid);
+      setGeneratedOtp(otp);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to generate OTP. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   const loadChildren = async () => {
     if (!firebaseUid) return;
@@ -202,6 +217,35 @@ export default function DoctorDashboardScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* OTP Generation Card */}
+        <View style={styles.otpCard}>
+          <Text style={styles.otpCardTitle}>🔑 Generate Parent Link OTP</Text>
+          <Text style={styles.otpCardSubtitle}>
+            Share this one-time code with a parent to link their child to your account.
+          </Text>
+          {generatedOtp ? (
+            <View style={styles.otpDisplay}>
+              <Text style={styles.otpCode}>{generatedOtp}</Text>
+              <Text style={styles.otpExpiry}>Valid 24 hrs • Single use</Text>
+              <TouchableOpacity onPress={handleGenerateOtp} disabled={otpLoading} style={styles.otpRefreshBtn}>
+                <Text style={styles.otpRefreshText}>{otpLoading ? '...' : '↺ New OTP'}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.otpGenerateBtn, otpLoading && { opacity: 0.6 }]}
+              onPress={handleGenerateOtp}
+              disabled={otpLoading}
+            >
+              {otpLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.otpGenerateBtnText}>Generate OTP</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+
         <Text style={styles.sectionTitle}>
           My Patients ({children.length})
         </Text>
@@ -333,6 +377,23 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '900', color: COLORS.gray700, marginBottom: 8 },
   emptyText: { fontSize: 14, fontWeight: '600', color: COLORS.gray500, textAlign: 'center', lineHeight: 20 },
   doctorIdHighlight: { fontWeight: '900', color: COLORS.primary },
+  otpCard: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#86EFAC',
+  },
+  otpCardTitle: { fontSize: 17, fontWeight: '900', color: '#15803D', marginBottom: 4 },
+  otpCardSubtitle: { fontSize: 13, color: '#166534', fontWeight: '600', marginBottom: 14, lineHeight: 20 },
+  otpDisplay: { alignItems: 'center' },
+  otpCode: { fontSize: 44, fontWeight: '900', color: '#15803D', letterSpacing: 10, marginBottom: 4 },
+  otpExpiry: { fontSize: 12, color: '#4ADE80', fontWeight: '700', marginBottom: 10 },
+  otpRefreshBtn: { backgroundColor: '#DCFCE7', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8 },
+  otpRefreshText: { color: '#15803D', fontWeight: '900', fontSize: 14 },
+  otpGenerateBtn: { backgroundColor: '#22C55E', borderRadius: 20, paddingVertical: 14, alignItems: 'center' },
+  otpGenerateBtnText: { color: '#fff', fontWeight: '900', fontSize: 16 },
 
   // Child detail view
   backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },

@@ -110,6 +110,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               setChildState(childData as ChildProfile);
               setChildIdState(id);
             }
+            // If no children, needsChildSetup flag handled in LoginScreen
           } else if (userRole === 'doctor' || userRole === 'admin') {
             const docProfile = await getDoctorProfile(user.uid);
             if (docProfile) setDoctorState(docProfile);

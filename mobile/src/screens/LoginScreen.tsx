@@ -18,7 +18,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useApp } from '../context/AppContext';
 import { COLORS } from '../constants';
-import { loginParent, loginDoctor, getDoctorProfile } from '../services/firebaseService';
+import { loginParent, loginDoctor, getDoctorProfile, getUserRole, getChildrenForParent } from '../services/firebaseService';
 
 type NavProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -75,10 +75,16 @@ export default function LoginScreen() {
     setParentLoading(true);
     setParentError('');
     try {
-      await loginParent(parentEmail.trim().toLowerCase(), parentPassword);
+      const uid = await loginParent(parentEmail.trim().toLowerCase(), parentPassword);
       setRole('parent');
       setShowParentModal(false);
-      resetToHome('Results');
+      // Check if parent has a child profile yet
+      const kids = await getChildrenForParent(uid);
+      if (kids.length === 0) {
+        resetToHome('OnboardingChild');
+      } else {
+        resetToHome('Results');
+      }
     } catch (err: any) {
       const code = err?.code || '';
       if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
@@ -105,11 +111,19 @@ export default function LoginScreen() {
     setDoctorError('');
     try {
       const uid = await loginDoctor(doctorEmail.trim().toLowerCase(), doctorPassword);
-      const docProfile = await getDoctorProfile(uid);
+      const userRole = await getUserRole(uid);
 
+      // Admin logging in through doctor modal
+      if (userRole === 'admin') {
+        setRole('admin');
+        setShowDoctorModal(false);
+        resetToHome('AdminDashboard');
+        return;
+      }
+
+      const docProfile = await getDoctorProfile(uid);
       if (!docProfile) {
         setDoctorError('No professional profile found. Please register first.');
-        setDoctorLoading(false);
         return;
       }
 

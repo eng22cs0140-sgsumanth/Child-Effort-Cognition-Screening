@@ -32,8 +32,7 @@ import { useCECICalculation } from '../hooks/useCECICalculation';
 import { calculateCECI } from '../ceciAlgorithm';
 import { COLORS } from '../constants';
 import {
-  findDoctorByProfessionalId,
-  assignChildToDoctor,
+  linkChildViaDoctorOtp,
   signOut as firebaseSignOut,
 } from '../services/firebaseService';
 
@@ -193,25 +192,27 @@ export default function ResultsScreen() {
   const [diaryOpen, setDiaryOpen] = useState(false);
   const [diaryInput, setDiaryInput] = useState('');
 
-  // ── Doctor Linkage ────────────────────────────────────────────────────
+  // ── Doctor Linkage via OTP ────────────────────────────────────────────
   const [doctorLinkOpen, setDoctorLinkOpen] = useState(false);
-  const [doctorIdInput, setDoctorIdInput] = useState('');
+  const [doctorOtp, setDoctorOtp] = useState('');
   const [doctorLinkLoading, setDoctorLinkLoading] = useState(false);
   const [doctorLinkError, setDoctorLinkError] = useState('');
 
-  const handleFindAndLinkDoctor = async () => {
-    if (!doctorIdInput.trim()) { setDoctorLinkError('Enter a doctor professional ID.'); return; }
+  const handleLinkViaOtp = async () => {
+    if (!doctorOtp.trim() || doctorOtp.trim().length !== 6) {
+      setDoctorLinkError('Enter the 6-digit OTP from your doctor.');
+      return;
+    }
     if (!childId) { setDoctorLinkError('Child profile not saved yet.'); return; }
     setDoctorLinkLoading(true);
     setDoctorLinkError('');
     try {
-      const doc = await findDoctorByProfessionalId(doctorIdInput.trim());
-      if (!doc) { setDoctorLinkError('No approved doctor found with that ID.'); return; }
-      await assignChildToDoctor(childId, doc.uid);
+      const doc = await linkChildViaDoctorOtp(doctorOtp.trim(), childId);
+      setDoctorOtp('');
       setDoctorLinkOpen(false);
       Alert.alert('Doctor Linked!', `${child.name} is now linked to ${doc.role} ${doc.fullName} at ${doc.hospital}.`);
-    } catch {
-      setDoctorLinkError('Failed to link. Please try again.');
+    } catch (e: any) {
+      setDoctorLinkError(e.message || 'Failed to link. Please try again.');
     } finally {
       setDoctorLinkLoading(false);
     }
@@ -727,36 +728,36 @@ export default function ResultsScreen() {
           </View>
         </Modal>
 
-        {/* Doctor Link Modal */}
+        {/* Doctor Link Modal (OTP) */}
         <Modal visible={doctorLinkOpen} animationType="slide" transparent onRequestClose={() => setDoctorLinkOpen(false)}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>🩺 Link to Doctor</Text>
               <Text style={styles.modalSubtitle}>
-                Enter the professional ID of the doctor/nurse advising your child.
-                They will be able to view {child.name || 'your child'}'s assessment records.
+                Ask your doctor to generate an OTP from their dashboard and enter it below.
               </Text>
               <TextInput
-                style={[styles.diaryInput, doctorLinkError ? { borderColor: '#EF4444' } : null]}
-                value={doctorIdInput}
-                onChangeText={v => { setDoctorIdInput(v); setDoctorLinkError(''); }}
-                placeholder="e.g. MCI-123456"
+                style={[styles.diaryInput, { textAlign: 'center', fontSize: 28, fontWeight: '900', letterSpacing: 8 }, doctorLinkError ? { borderColor: '#EF4444' } : null]}
+                value={doctorOtp}
+                onChangeText={v => { setDoctorOtp(v.replace(/\D/g, '').slice(0, 6)); setDoctorLinkError(''); }}
+                placeholder="000000"
                 placeholderTextColor={COLORS.gray400}
-                autoCapitalize="none"
+                keyboardType="number-pad"
+                maxLength={6}
                 autoFocus
               />
               {doctorLinkError ? <Text style={{ color: '#EF4444', fontSize: 13, fontWeight: '700', marginBottom: 8, marginLeft: 4 }}>⚠ {doctorLinkError}</Text> : null}
               <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
                 <TouchableOpacity
                   style={[styles.writeBtn, { flex: 1, backgroundColor: COLORS.gray100, borderRadius: 20, paddingVertical: 14 }]}
-                  onPress={() => setDoctorLinkOpen(false)}
+                  onPress={() => { setDoctorLinkOpen(false); setDoctorOtp(''); setDoctorLinkError(''); }}
                 >
                   <Text style={{ color: COLORS.gray600, fontWeight: '900', fontSize: 16 }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.writeBtn, { flex: 1, backgroundColor: '#22C55E', borderRadius: 20, paddingVertical: 14 }, doctorLinkLoading && { opacity: 0.7 }]}
-                  onPress={handleFindAndLinkDoctor}
-                  disabled={doctorLinkLoading}
+                  style={[styles.writeBtn, { flex: 1, backgroundColor: '#22C55E', borderRadius: 20, paddingVertical: 14 }, (doctorLinkLoading || doctorOtp.length !== 6) && { opacity: 0.6 }]}
+                  onPress={handleLinkViaOtp}
+                  disabled={doctorLinkLoading || doctorOtp.length !== 6}
                 >
                   {doctorLinkLoading ? (
                     <ActivityIndicator color="#fff" size="small" />
