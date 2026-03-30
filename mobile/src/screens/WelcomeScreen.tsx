@@ -25,9 +25,9 @@ export default function WelcomeScreen() {
         <CECILogo size={120} />
 
         <Text style={styles.greeting}>
-          Hi! I'm <Text style={styles.greetingAccent}>Starry!</Text>
+          Welcome to <Text style={styles.greetingAccent}>CECI!</Text>
         </Text>
-        <Text style={styles.subtitle}>Ready to explore your super powers?</Text>
+        <Text style={styles.subtitle}>Early childhood developmental screening, made simple.</Text>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>
@@ -51,7 +51,7 @@ export default function WelcomeScreen() {
           onPress={() => navigation.navigate('Login')}
           activeOpacity={0.85}
         >
-          <Text style={styles.playButtonText}>LET'S PLAY! 🚀</Text>
+          <Text style={styles.playButtonText}>GET STARTED 🚀</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

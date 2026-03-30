@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   View,
@@ -11,101 +10,133 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useApp } from '../context/AppContext';
-import { UserRole } from '../types';
 import { COLORS } from '../constants';
-import { PARENT_CREDS_KEY } from './OnboardingParentScreen';
+import { loginParent, loginDoctor, getDoctorProfile } from '../services/firebaseService';
 
 type NavProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
-const roles = [
-  {
-    role: 'child' as UserRole,
-    icon: '🎮',
-    label: 'Child',
-    desc: 'I want to play games!',
-    bg: '#EFF6FF',
-    border: '#3B82F6',
-    text: '#2563EB',
-  },
-  {
-    role: 'parent' as UserRole,
-    icon: '❤️',
-    label: 'Parent',
-    desc: 'View child\'s progress',
-    bg: '#F5F3FF',
-    border: COLORS.primary,
-    text: COLORS.primary,
-  },
-  {
-    role: 'doctor' as UserRole,
-    icon: '🩺',
-    label: 'Doctor',
-    desc: 'Analyze health data',
-    bg: '#F0FDF4',
-    border: '#22C55E',
-    text: '#15803D',
-  },
-];
-
 export default function LoginScreen() {
   const navigation = useNavigation<NavProp>();
-  const { setRole, setParent, parent } = useApp();
+  const { setRole, setParent, setDoctor, role: currentRole, firebaseUid } = useApp();
 
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
+  // Parent login modal
+  const [showParentModal, setShowParentModal] = useState(false);
+  const [parentEmail, setParentEmail] = useState('');
+  const [parentPassword, setParentPassword] = useState('');
+  const [parentError, setParentError] = useState('');
+  const [parentLoading, setParentLoading] = useState(false);
 
-  const handleRoleSelection = async (selectedRole: UserRole) => {
-    setRole(selectedRole);
-    if (selectedRole === 'child') {
-      navigation.navigate('Assessment');
-    } else if (selectedRole === 'doctor') {
-      navigation.navigate('Results');
-    } else {
-      // Parent — check if already registered
-      try {
-        const stored = await AsyncStorage.getItem(PARENT_CREDS_KEY);
-        if (stored) {
-          const creds = JSON.parse(stored);
-          setParent({ ...parent, name: creds.name, email: creds.email, relationship: '' });
-          setLoginEmail('');
-          setLoginPassword('');
-          setLoginError('');
-          setShowLoginModal(true);
-        } else {
-          navigation.navigate('OnboardingParent');
-        }
-      } catch {
-        navigation.navigate('OnboardingParent');
+  // Doctor login modal
+  const [showDoctorModal, setShowDoctorModal] = useState(false);
+  const [doctorEmail, setDoctorEmail] = useState('');
+  const [doctorPassword, setDoctorPassword] = useState('');
+  const [doctorError, setDoctorError] = useState('');
+  const [doctorLoading, setDoctorLoading] = useState(false);
+
+  const resetToHome = (screen: keyof RootStackParamList) => {
+    navigation.dispatch(
+      CommonActions.reset({ index: 0, routes: [{ name: screen }] })
+    );
+  };
+
+  const handleParentPress = () => {
+    if (firebaseUid && currentRole === 'parent') {
+      resetToHome('Results');
+      return;
+    }
+    setParentEmail('');
+    setParentPassword('');
+    setParentError('');
+    setShowParentModal(true);
+  };
+
+  const handleDoctorPress = () => {
+    setDoctorEmail('');
+    setDoctorPassword('');
+    setDoctorError('');
+    setShowDoctorModal(true);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Parent login with Firebase Auth
+  // ---------------------------------------------------------------------------
+  const handleParentLogin = async () => {
+    if (!parentEmail.trim() || !parentPassword) {
+      setParentError('Please enter your email and password.');
+      return;
+    }
+    setParentLoading(true);
+    setParentError('');
+    try {
+      await loginParent(parentEmail.trim().toLowerCase(), parentPassword);
+      setRole('parent');
+      setShowParentModal(false);
+      resetToHome('Results');
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setParentError('Incorrect email or password.');
+      } else if (code === 'auth/invalid-email') {
+        setParentError('Invalid email address.');
+      } else {
+        setParentError('Login failed. Please try again.');
       }
+    } finally {
+      setParentLoading(false);
     }
   };
 
-  const handleLoginConfirm = async () => {
+  // ---------------------------------------------------------------------------
+  // Doctor login with Firebase Auth + status check
+  // ---------------------------------------------------------------------------
+  const handleDoctorLogin = async () => {
+    if (!doctorEmail.trim() || !doctorPassword) {
+      setDoctorError('Please enter your email and password.');
+      return;
+    }
+    setDoctorLoading(true);
+    setDoctorError('');
     try {
-      const stored = await AsyncStorage.getItem(PARENT_CREDS_KEY);
-      if (!stored) { setLoginError('No account found. Please register.'); return; }
-      const creds = JSON.parse(stored);
-      if (loginEmail.trim().toLowerCase() !== creds.email.toLowerCase()) {
-        setLoginError('Email does not match.');
+      const uid = await loginDoctor(doctorEmail.trim().toLowerCase(), doctorPassword);
+      const docProfile = await getDoctorProfile(uid);
+
+      if (!docProfile) {
+        setDoctorError('No professional profile found. Please register first.');
+        setDoctorLoading(false);
         return;
       }
-      if (loginPassword !== creds.password) {
-        setLoginError('Incorrect password.');
-        return;
+
+      setDoctor(docProfile);
+      setRole('doctor');
+      setShowDoctorModal(false);
+
+      if (docProfile.status === 'pending') {
+        resetToHome('DoctorPending');
+      } else if (docProfile.status === 'rejected') {
+        Alert.alert(
+          'Registration Rejected',
+          `Your registration was not approved.\nReason: ${docProfile.rejectionReason || 'No reason provided.'}`,
+          [{ text: 'OK' }]
+        );
+      } else {
+        resetToHome('DoctorDashboard');
       }
-      setParent({ ...parent, name: creds.name, email: creds.email, relationship: '' });
-      setShowLoginModal(false);
-      navigation.navigate('Results');
-    } catch {
-      setLoginError('Login failed. Please try again.');
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setDoctorError('Incorrect email or password.');
+      } else {
+        setDoctorError('Login failed. Please try again.');
+      }
+    } finally {
+      setDoctorLoading(false);
     }
   };
 
@@ -116,38 +147,80 @@ export default function LoginScreen() {
           <Text style={styles.backBtnText}>⬅️</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>Welcome Back!</Text>
-        <Text style={styles.subtitle}>Who is logging in today?</Text>
+        {/* Header */}
+        <Text style={styles.title}>Who are you?</Text>
+        <Text style={styles.subtitle}>Select your role to continue</Text>
 
-        <View style={styles.rolesContainer}>
-          {roles.map(r => (
-            <TouchableOpacity
-              key={r.role}
-              style={[styles.roleCard, { borderColor: r.border }]}
-              onPress={() => handleRoleSelection(r.role)}
-              activeOpacity={0.85}
-            >
-              <View style={[styles.roleIconContainer, { backgroundColor: r.bg }]}>
-                <Text style={styles.roleIcon}>{r.icon}</Text>
-              </View>
-              <Text style={[styles.roleLabel, { color: r.text }]}>{r.label}</Text>
-              <Text style={styles.roleDesc}>{r.desc}</Text>
-            </TouchableOpacity>
-          ))}
+        {/* Parent Card */}
+        <TouchableOpacity
+          style={[styles.roleCard, styles.parentCard]}
+          onPress={handleParentPress}
+          activeOpacity={0.85}
+        >
+          <View style={styles.roleIconWrap}>
+            <Text style={styles.roleIcon}>❤️</Text>
+          </View>
+          <View style={styles.roleTextWrap}>
+            <Text style={[styles.roleLabel, { color: COLORS.primary }]}>I'm a Parent</Text>
+            <Text style={styles.roleDesc}>
+              Log in to view your child's progress and play assessment games together.
+            </Text>
+            <Text style={[styles.roleArrow, { color: COLORS.primary }]}>Get Started →</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Doctor Card */}
+        <TouchableOpacity
+          style={[styles.roleCard, styles.doctorCard]}
+          onPress={handleDoctorPress}
+          activeOpacity={0.85}
+        >
+          <View style={[styles.roleIconWrap, { backgroundColor: '#F0FDF4' }]}>
+            <Text style={styles.roleIcon}>🩺</Text>
+          </View>
+          <View style={styles.roleTextWrap}>
+            <Text style={[styles.roleLabel, { color: '#15803D' }]}>I'm a Doctor</Text>
+            <Text style={styles.roleDesc}>
+              Log in as a registered healthcare professional to access assigned patient records.
+            </Text>
+            <Text style={[styles.roleArrow, { color: '#15803D' }]}>Get Started →</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Register links */}
+        <View style={styles.registerRow}>
+          <Text style={styles.registerPrompt}>New here? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('OnboardingParent')}>
+            <Text style={styles.registerLinkPurple}>Create parent account</Text>
+          </TouchableOpacity>
+          <Text style={styles.registerPrompt}> or </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('DoctorRegister')}>
+            <Text style={styles.registerLinkGreen}>Register as professional</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Parent Login Modal */}
-      <Modal visible={showLoginModal} animationType="slide" transparent onRequestClose={() => { setShowLoginModal(false); setRole(null); }}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* ------------------------------------------------------------------ */}
+      {/* Parent Login Modal                                                  */}
+      {/* ------------------------------------------------------------------ */}
+      <Modal
+        visible={showParentModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowParentModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>🔐 Parent Login</Text>
             <Text style={styles.modalSubtitle}>Enter your credentials to access the dashboard</Text>
 
             <TextInput
               style={styles.modalInput}
-              value={loginEmail}
-              onChangeText={v => { setLoginEmail(v); setLoginError(''); }}
+              value={parentEmail}
+              onChangeText={v => { setParentEmail(v); setParentError(''); }}
               placeholder="Email address"
               placeholderTextColor={COLORS.gray400}
               keyboardType="email-address"
@@ -155,32 +228,93 @@ export default function LoginScreen() {
               autoFocus
             />
             <TextInput
-              style={[styles.modalInput, loginError ? styles.inputError : null]}
-              value={loginPassword}
-              onChangeText={v => { setLoginPassword(v); setLoginError(''); }}
+              style={[styles.modalInput, parentError ? styles.inputError : null]}
+              value={parentPassword}
+              onChangeText={v => { setParentPassword(v); setParentError(''); }}
               placeholder="Password"
               placeholderTextColor={COLORS.gray400}
               secureTextEntry
             />
-            {loginError ? <Text style={styles.errorText}>⚠ {loginError}</Text> : null}
+            {parentError ? <Text style={styles.errorText}>⚠ {parentError}</Text> : null}
 
             <View style={styles.modalBtns}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => { setShowLoginModal(false); setRole(null); }}
-              >
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowParentModal(false)}>
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmBtn} onPress={handleLoginConfirm}>
-                <Text style={styles.confirmBtnText}>Login</Text>
+              <TouchableOpacity
+                style={[styles.confirmBtn, parentLoading && { opacity: 0.7 }]}
+                onPress={handleParentLogin}
+                disabled={parentLoading}
+              >
+                {parentLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmBtnText}>Login</Text>}
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity
               style={styles.registerLink}
-              onPress={() => { setShowLoginModal(false); navigation.navigate('OnboardingParent'); }}
+              onPress={() => { setShowParentModal(false); navigation.navigate('OnboardingParent'); }}
             >
               <Text style={styles.registerLinkText}>New user? Register here</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Doctor Login Modal                                                  */}
+      {/* ------------------------------------------------------------------ */}
+      <Modal
+        visible={showDoctorModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowDoctorModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>🩺 Professional Login</Text>
+            <Text style={styles.modalSubtitle}>Login with your registered professional credentials</Text>
+
+            <TextInput
+              style={styles.modalInput}
+              value={doctorEmail}
+              onChangeText={v => { setDoctorEmail(v); setDoctorError(''); }}
+              placeholder="Professional email"
+              placeholderTextColor={COLORS.gray400}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoFocus
+            />
+            <TextInput
+              style={[styles.modalInput, doctorError ? styles.inputError : null]}
+              value={doctorPassword}
+              onChangeText={v => { setDoctorPassword(v); setDoctorError(''); }}
+              placeholder="Password"
+              placeholderTextColor={COLORS.gray400}
+              secureTextEntry
+            />
+            {doctorError ? <Text style={styles.errorText}>⚠ {doctorError}</Text> : null}
+
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowDoctorModal(false)}>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmBtn, { backgroundColor: '#22C55E' }, doctorLoading && { opacity: 0.7 }]}
+                onPress={handleDoctorLogin}
+                disabled={doctorLoading}
+              >
+                {doctorLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmBtnText}>Login</Text>}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.registerLink}
+              onPress={() => { setShowDoctorModal(false); navigation.navigate('DoctorRegister'); }}
+            >
+              <Text style={[styles.registerLinkText, { color: '#22C55E' }]}>New professional? Register here</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -221,18 +355,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    color: COLORS.primaryLight,
+    color: COLORS.gray400,
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 36,
   },
-  rolesContainer: { width: '100%', gap: 20 },
+
+  // Role cards
   roleCard: {
+    width: '100%',
     backgroundColor: COLORS.white,
     borderRadius: 32,
-    padding: 28,
+    padding: 24,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 20,
+    marginBottom: 20,
     borderWidth: 3,
     shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 6 },
@@ -240,17 +379,47 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
   },
-  roleIconContainer: {
-    width: 90,
-    height: 90,
-    borderRadius: 24,
+  parentCard: { borderColor: COLORS.purple100 },
+  doctorCard: { borderColor: '#BBF7D0' },
+  roleIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 22,
+    backgroundColor: COLORS.purple100,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    flexShrink: 0,
   },
-  roleIcon: { fontSize: 44 },
-  roleLabel: { fontSize: 26, fontWeight: '900', marginBottom: 6 },
-  roleDesc: { fontSize: 16, color: COLORS.gray500, fontWeight: '600' },
+  roleIcon: { fontSize: 40 },
+  roleTextWrap: { flex: 1 },
+  roleLabel: {
+    fontSize: 22,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+  roleDesc: {
+    fontSize: 13,
+    color: COLORS.gray500,
+    fontWeight: '600',
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  roleArrow: {
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  // Register row
+  registerRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: 8,
+    gap: 2,
+  },
+  registerPrompt: { fontSize: 13, color: COLORS.gray400, fontWeight: '600' },
+  registerLinkPurple: { fontSize: 13, color: COLORS.primary, fontWeight: '800', textDecorationLine: 'underline' },
+  registerLinkGreen: { fontSize: 13, color: '#15803D', fontWeight: '800', textDecorationLine: 'underline' },
 
   // Modal
   modalOverlay: {
@@ -326,5 +495,10 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: { color: COLORS.white, fontSize: 17, fontWeight: '900' },
   registerLink: { alignItems: 'center', marginTop: 16 },
-  registerLinkText: { color: COLORS.primary, fontSize: 14, fontWeight: '700', textDecorationLine: 'underline' },
+  registerLinkText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
 });

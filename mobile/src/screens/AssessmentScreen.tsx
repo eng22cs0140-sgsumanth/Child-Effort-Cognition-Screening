@@ -8,13 +8,15 @@ import {
   SafeAreaView,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useApp } from '../context/AppContext';
 import { GAMES, COLORS } from '../constants';
 import { GameType, GameResult } from '../types';
+import { saveGameResult, getWeekKey } from '../services/firebaseService';
 
 import ReactionCatcher from '../components/games/ReactionCatcher';
 import PatternMemory from '../components/games/PatternMemory';
@@ -38,32 +40,49 @@ const BADGE_COLORS: Record<string, { bg: string; text: string }> = {
 
 export default function AssessmentScreen() {
   const navigation = useNavigation<NavProp>();
-  const { child, role, addResult } = useApp();
+  const { child, childId, role, addResult } = useApp();
   const [activeGame, setActiveGame] = useState<GameType | null>(null);
 
-  const handleGameEnd = (data: any) => {
-    if (activeGame) {
-      const metrics = data.behavioralMetrics;
-      const hasInteractions = metrics
-        ? (metrics.correctAttempts + metrics.incorrectAttempts) > 0
-        : (data.score || 0) > 0;
+  const handleGameEnd = async (data: any) => {
+    if (!activeGame) return;
 
-      if (!hasInteractions) {
-        setActiveGame(null);
-        return;
-      }
+    const metrics = data.behavioralMetrics;
+    const hasInteractions = metrics
+      ? (metrics.correctAttempts + metrics.incorrectAttempts) > 0
+      : (data.score || 0) > 0;
 
-      const result: GameResult = {
-        gameId: activeGame,
-        score: data.score || 0,
-        data,
-        timestamp: Date.now(),
-      };
-      addResult(result);
+    if (!hasInteractions) {
       setActiveGame(null);
-      if (role === 'child') {
-        navigation.navigate('Results');
+      return;
+    }
+
+    const result: GameResult = {
+      gameId: activeGame,
+      score: data.score || 0,
+      data,
+      timestamp: Date.now(),
+    };
+
+    // Save to in-memory context (also persists to AsyncStorage as fallback)
+    addResult(result);
+
+    // Save to Firestore if we have a child document ID
+    if (childId) {
+      try {
+        // Compute basic domain indices for the session document
+        const domainIndices = {
+          VMI: 0, FRI: 0, LCI: 0, IFI: 0, API: 0, ATI: 0,
+        };
+        await saveGameResult(childId, result, domainIndices);
+      } catch (e) {
+        // Non-blocking — game result is still saved locally
+        console.warn('Firestore save failed (offline?):', e);
       }
+    }
+
+    setActiveGame(null);
+    if (role === 'child') {
+      navigation.navigate('Results');
     }
   };
 

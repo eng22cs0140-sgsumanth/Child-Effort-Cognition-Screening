@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Section, ChildProfile, ParentProfile, GameResult, UserRole, Observation, AssessmentSession, DomainIndices } from './types';
+import { Section, ChildProfile, ParentProfile, DoctorProfile, GameResult, UserRole, Observation, AssessmentSession, DomainIndices } from './types';
 import { AssessmentPage } from './components/AssessmentPage';
 import { HelpPage } from './components/HelpPage';
 import { ObservationsDiary } from './components/ObservationsDiary';
@@ -8,9 +8,39 @@ import { getCECIBreakdown, estimateCECIParameters, estimateCECIParametersFromSes
 import { ReportTemplate } from './components/ReportTemplate';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import {
+  auth,
+  db,
+  onAuthChange,
+  signOut as firebaseSignOut,
+  getUserRole,
+  registerParent,
+  loginParent,
+  loginDoctor,
+  getParentProfile,
+  getDoctorProfile,
+  getChildrenForParent,
+  createChildProfile,
+  updateChildProfile,
+  saveGameResult,
+  getSessionsForChild,
+  getPendingDoctors,
+  getApprovedDoctors,
+  approveDoctor,
+  rejectDoctor,
+  registerDoctor,
+  findDoctorByProfessionalId,
+  assignChildToDoctor,
+  getWeekKey,
+} from './services/firebaseService';
+import emailjs from '@emailjs/browser';
 
 const SESSION_STORAGE_KEY = 'ceci_sessions';
-const PARENT_CREDENTIALS_KEY = 'ceci_parent_credentials';
+// EmailJS config — set these in your .env file
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
+const EMAILJS_WEEKLY_TEMPLATE = import.meta.env.VITE_EMAILJS_WEEKLY_TEMPLATE_ID || '';
+const EMAILJS_APPROVAL_TEMPLATE = import.meta.env.VITE_EMAILJS_APPROVAL_TEMPLATE_ID || '';
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || '';
 
 // ── Validation helpers ────────────────────────────────────────────────────
 const isValidEmail = (email: string) =>
@@ -20,10 +50,37 @@ const isValidName = (name: string) =>
   name.trim().length >= 2 && /[a-zA-Z]/.test(name);
 
 const App: React.FC = () => {
-  const [section, setSection] = useState<Section>('welcome');
+  // Auth
+  const [authLoading, setAuthLoading] = useState(true);
+  const [firebaseUid, setFirebaseUid] = useState<string | null>(null);
+  const [section, setSection] = useState<Section>('loading');
   const [history, setHistory] = useState<Section[]>([]);
   const [role, setRole] = useState<UserRole | null>(null);
   const [isDiaryOpen, setIsDiaryOpen] = useState(false);
+
+  // Doctor state
+  const [doctor, setDoctor] = useState<DoctorProfile | null>(null);
+  const [childId, setChildId] = useState<string | null>(null);
+  const [pendingDoctors, setPendingDoctors] = useState<DoctorProfile[]>([]);
+  const [approvedDoctors, setApprovedDoctors] = useState<DoctorProfile[]>([]);
+  const [adminActionLoading, setAdminActionLoading] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
+
+  // Doctor link
+  const [doctorIdInput, setDoctorIdInput] = useState('');
+  const [doctorLinkError, setDoctorLinkError] = useState('');
+  const [doctorLinkLoading, setDoctorLinkLoading] = useState(false);
+
+  // Doctor registration form
+  const [drForm, setDrForm] = useState({
+    email: '', password: '', confirmPassword: '',
+    fullName: '', doctorId: '', role: 'Doctor' as 'Doctor' | 'Nurse' | 'Therapist',
+    specialty: '', hospital: '', department: '',
+    licenseNumber: '', yearsOfExperience: '', qualification: '',
+  });
+  const [drErrors, setDrErrors] = useState<Record<string, string>>({});
+  const [drLoading, setDrLoading] = useState(false);
 
   // ── Parent auth state ─────────────────────────────────────────────────
   const [parentPassword, setParentPassword] = useState('');
@@ -60,6 +117,10 @@ const App: React.FC = () => {
     gestationalAgeWeeks: 0,
     familyHistoryOfDD: null,
     knownConditions: '',
+    bloodGroup: '',
+    height: 0,
+    weight: 0,
+    bmi: 0,
     observations: []
   });
 
@@ -102,14 +163,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleGameComplete = (result: GameResult) => {
-    setResults(prev => [...prev, result]);
-    if (role === 'child') {
-      navigateTo('assessment');
-    } else {
-      navigateTo('results');
-    }
-  };
+  // handleGameComplete is defined in the Firebase section above (async version)
 
   const calculateAge = (dob: string) => {
     if (!dob) return 0;
@@ -172,6 +226,52 @@ const App: React.FC = () => {
 
   const [ceciAnalysis, setCeciAnalysis] = useState<CECIResult | null>(null);
 
+  // ── Firebase Auth listener ─────────────────────────────────────────────
+  useEffect(() => {
+    const unsubscribe = onAuthChange(async (user) => {
+      if (user) {
+        setFirebaseUid(user.uid);
+        try {
+          const userRole = await getUserRole(user.uid) as UserRole | null;
+          setRole(userRole);
+
+          if (userRole === 'parent') {
+            const profile = await getParentProfile(user.uid);
+            if (profile) setParent(prev => ({ ...prev, ...profile }));
+
+            const kids = await getChildrenForParent(user.uid);
+            if (kids.length > 0) {
+              const { id, parentUid, assignedDoctorUid, ...childData } = kids[0] as any;
+              setChild(prev => ({ ...prev, ...childData }));
+              setChildId(id);
+            }
+
+            setSection('results');
+          } else if (userRole === 'doctor') {
+            const docProfile = await getDoctorProfile(user.uid);
+            if (docProfile) {
+              setDoctor(docProfile);
+              setSection(docProfile.status === 'approved' ? 'doctor-dashboard' : 'doctor-pending');
+            }
+          } else if (userRole === 'admin') {
+            setSection('admin-dashboard');
+          } else {
+            setSection('welcome');
+          }
+        } catch (e) {
+          console.warn('Auth load error:', e);
+          setSection('welcome');
+        }
+      } else {
+        setFirebaseUid(null);
+        setRole(null);
+        setSection('welcome');
+      }
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Load session history from localStorage on mount.
   // If URL contains ?clearSessions=1, wipe stored history first (used by clear-sessions.sh).
   useEffect(() => {
@@ -233,26 +333,178 @@ const App: React.FC = () => {
     : { pid: 0, varAcc: 0, peff: 0, insufficientData: true };
 
   const handleRoleSelection = (selectedRole: UserRole) => {
-    setRole(selectedRole);
-    if (selectedRole === 'child') {
-      navigateTo('assessment');
-    } else if (selectedRole === 'doctor') {
-      navigateTo('results');
+    if (selectedRole === 'doctor') {
+      setLoginEmail('');
+      setLoginPassword('');
+      setLoginError('');
+      setRole('doctor');
+      setShowParentLoginModal(true);
     } else {
-      // Parent — check if already registered
-      const stored = localStorage.getItem(PARENT_CREDENTIALS_KEY);
-      if (stored) {
-        try {
-          const creds = JSON.parse(stored);
-          setParent(prev => ({ ...prev, name: creds.name, email: creds.email }));
-        } catch {}
-        setLoginEmail('');
-        setLoginPassword('');
-        setLoginError('');
-        setShowParentLoginModal(true);
-      } else {
-        navigateTo('onboarding-parent');
+      // Parent
+      if (firebaseUid && role === 'parent') {
+        navigateTo('results');
+        return;
       }
+      setRole('parent');
+      setLoginEmail('');
+      setLoginPassword('');
+      setLoginError('');
+      setShowParentLoginModal(true);
+    }
+  };
+
+  const handleParentLogin = async () => {
+    if (!loginEmail || !loginPassword) { setLoginError('Enter email and password.'); return; }
+    try {
+      const uid = await loginParent(loginEmail.trim().toLowerCase(), loginPassword);
+      // Auth listener will handle routing
+      setShowParentLoginModal(false);
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password') {
+        setLoginError('Incorrect email or password.');
+      } else {
+        setLoginError('Login failed. Please try again.');
+      }
+    }
+  };
+
+  const handleDoctorLogin = async () => {
+    if (!loginEmail || !loginPassword) { setLoginError('Enter email and password.'); return; }
+    try {
+      const uid = await loginDoctor(loginEmail.trim().toLowerCase(), loginPassword);
+      const docProfile = await getDoctorProfile(uid);
+      if (!docProfile) { setLoginError('No professional profile found.'); return; }
+      setDoctor(docProfile);
+      setShowParentLoginModal(false);
+      if (docProfile.status === 'pending') navigateTo('doctor-pending');
+      else if (docProfile.status === 'rejected') {
+        setLoginError(`Registration rejected: ${docProfile.rejectionReason || 'No reason provided.'}`);
+      } else {
+        navigateTo('doctor-dashboard');
+      }
+    } catch (err: any) {
+      setLoginError('Login failed. Please try again.');
+    }
+  };
+
+  const handleSignOut = async () => {
+    await firebaseSignOut();
+    setFirebaseUid(null);
+    setRole(null);
+    setDoctor(null);
+    setChildId(null);
+    setHistory([]);
+    setSection('welcome');
+  };
+
+  const handleParentRegister = async () => {
+    const errs: Record<string, string> = {};
+    if (!isValidName(parent.name)) errs.name = 'Enter your full name.';
+    if (!isValidEmail(parent.email)) errs.email = 'Enter a valid email.';
+    if (!parentPassword || parentPassword.length < 6) errs.password = 'Password must be at least 6 characters.';
+    setParentErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    try {
+      const uid = await registerParent(parent.email.trim().toLowerCase(), parentPassword, {
+        name: parent.name.trim(), relationship: parent.relationship || '',
+      });
+      setFirebaseUid(uid);
+      setRole('parent');
+      navigateTo('onboarding-child');
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/email-already-in-use') {
+        setParentErrors({ email: 'Email already registered. Please log in instead.' });
+      } else {
+        setParentErrors({ email: err.message || 'Registration failed.' });
+      }
+    }
+  };
+
+  const handleChildSave = async () => {
+    // Validate child form (same as before) then save to Firestore
+    if (firebaseUid && !childId) {
+      try {
+        const { observations, ...childData } = child;
+        const newId = await createChildProfile(firebaseUid, childData);
+        setChildId(newId);
+      } catch (e) {
+        console.warn('Firestore child save failed:', e);
+      }
+    } else if (childId) {
+      try {
+        await updateChildProfile(childId, child);
+      } catch (e) {
+        console.warn('Firestore child update failed:', e);
+      }
+    }
+  };
+
+  const handleSendWeeklyReport = async () => {
+    if (!parent.email || !EMAILJS_SERVICE_ID) return;
+    const latestSession = sessionHistory[sessionHistory.length - 1];
+    const riskBand = ceciAnalysis?.riskBand || 'green';
+    const recs: Record<string, string[]> = {
+      green: ['Keep encouraging play sessions!', 'Try different game types.', 'Celebrate achievements!'],
+      amber: ['Ensure distraction-free environment.', 'Practice challenging games.', 'Reward effort.'],
+      red: ['Follow up with a paediatrician.', 'Keep a daily activity journal.', 'Reduce distractions.'],
+    };
+    try {
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_WEEKLY_TEMPLATE, {
+        to_email: parent.email,
+        to_name: parent.name,
+        child_name: child.name || 'your child',
+        week_range: latestSession ? new Date(latestSession.date).toLocaleDateString() : 'this week',
+        ceci_band: riskBand,
+        ceci_label: ceciAnalysis?.riskLabel || 'Typical Development',
+        clinical_note: ceciAnalysis?.clinicalNote || 'No notes available.',
+        games_summary: latestSession
+          ? latestSession.results.map(r => `${r.gameId}: ${Math.round(r.score)}%`).join(', ')
+          : 'No games played yet.',
+        recommendations: recs[riskBand].join('\n'),
+      }, EMAILJS_PUBLIC_KEY);
+      alert('Weekly report sent to ' + parent.email);
+    } catch (e) {
+      alert('Failed to send report. Please check your EmailJS configuration.');
+    }
+  };
+
+  const handleFindAndLinkDoctor = async () => {
+    if (!doctorIdInput.trim()) { setDoctorLinkError('Enter a doctor professional ID.'); return; }
+    if (!childId) { setDoctorLinkError('Save child profile first.'); return; }
+    setDoctorLinkLoading(true);
+    setDoctorLinkError('');
+    try {
+      const doc = await findDoctorByProfessionalId(doctorIdInput.trim());
+      if (!doc) { setDoctorLinkError('No approved doctor found with that ID.'); return; }
+      await assignChildToDoctor(childId, doc.uid);
+      setDoctorLinkError('');
+      setDoctorIdInput('');
+      alert(`${child.name} successfully linked to ${doc.role} ${doc.fullName} at ${doc.hospital}.`);
+    } catch {
+      setDoctorLinkError('Failed to link. Please try again.');
+    } finally {
+      setDoctorLinkLoading(false);
+    }
+  };
+
+  const handleGameComplete = async (result: GameResult) => {
+    setResults(prev => [...prev, result]);
+    // Save to Firestore
+    if (childId) {
+      try {
+        const di = computeDomainIndices([...results, result]);
+        await saveGameResult(childId, result, di);
+      } catch (e) {
+        console.warn('Firestore game save failed:', e);
+      }
+    }
+    if (role === 'child') {
+      navigateTo('assessment');
+    } else {
+      navigateTo('results');
     }
   };
 
@@ -294,6 +546,277 @@ const App: React.FC = () => {
 
   const renderSection = () => {
     switch (section) {
+      case 'loading':
+        return (
+          <div className="flex flex-col items-center justify-center min-h-screen bg-[#FFF9E6]">
+            <div className="text-[100px] mb-6" style={{ animation: 'bounce 1s infinite' }}>🌟</div>
+            <h1 className="text-6xl font-black text-purple-700 mb-2 tracking-widest">CECI</h1>
+            <p className="text-lg font-black text-orange-500 uppercase tracking-widest mb-2">
+              Child Effort-Cognition Index
+            </p>
+            <p className="text-base text-purple-400 font-bold mb-8">
+              Game-based developmental screening for children aged 3–9
+            </p>
+            <div className="flex gap-3 mb-8">
+              {[0, 1, 2].map(i => (
+                <div
+                  key={i}
+                  className="w-4 h-4 bg-purple-400 rounded-full"
+                  style={{ animation: `bounce 1s infinite ${i * 0.2}s` }}
+                />
+              ))}
+            </div>
+            <p className="text-sm text-purple-300 font-bold">Getting things ready...</p>
+          </div>
+        );
+
+      case 'doctor-pending':
+        return (
+          <div className="container mx-auto px-4 py-10 max-w-lg">
+            <div className="bg-white rounded-3xl p-8 shadow-xl text-center">
+              <div className="text-6xl mb-4">⏳</div>
+              <h2 className="text-2xl font-black text-yellow-600 mb-4">Registration Under Review</h2>
+              <p className="text-gray-600 mb-4 font-semibold">
+                Your credentials are being reviewed by our administrator.
+                You will receive an email at <strong>{doctor?.email}</strong> once approved.
+              </p>
+              <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-4 mb-6 text-left">
+                <p className="font-bold text-green-800 mb-2">What happens next?</p>
+                <p className="text-sm text-green-700">1. Admin reviews your professional details</p>
+                <p className="text-sm text-green-700">2. You receive an approval email</p>
+                <p className="text-sm text-green-700">3. Log in to access child assessment records</p>
+              </div>
+              {doctor && (
+                <div className="bg-purple-50 border-2 border-purple-200 rounded-2xl p-4 mb-6 text-left">
+                  <p className="font-bold text-purple-800 mb-2">Submitted Profile</p>
+                  <p className="text-sm text-gray-700"><strong>Name:</strong> {doctor.fullName}</p>
+                  <p className="text-sm text-gray-700"><strong>Role:</strong> {doctor.role}</p>
+                  <p className="text-sm text-gray-700"><strong>Hospital:</strong> {doctor.hospital}</p>
+                  <p className="text-sm text-gray-700"><strong>Specialty:</strong> {doctor.specialty}</p>
+                </div>
+              )}
+              <button
+                onClick={handleSignOut}
+                className="bg-gray-100 text-gray-600 font-bold px-8 py-3 rounded-full"
+              >Sign Out</button>
+            </div>
+          </div>
+        );
+
+      case 'doctor-register':
+        return (
+          <div className="container mx-auto px-4 py-10 max-w-2xl">
+            <button onClick={goBack} className="mb-6 flex items-center gap-2 text-purple-600 font-bold text-lg">
+              ⬅️ Back
+            </button>
+            <div className="bg-white rounded-3xl p-8 shadow-xl">
+              <h2 className="text-2xl font-black text-purple-700 mb-2">🩺 Professional Registration</h2>
+              <p className="text-sm text-yellow-700 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-xl mb-6 font-semibold">
+                Your account will be reviewed by an administrator before access is granted.
+              </p>
+              <div className="space-y-4">
+                {(['email','password','confirmPassword','fullName','doctorId','specialty','hospital','department','licenseNumber','yearsOfExperience','qualification'] as const).map(field => (
+                  <div key={field}>
+                    <label className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1 block">
+                      {field === 'confirmPassword' ? 'Confirm Password' :
+                       field === 'fullName' ? 'Full Name *' :
+                       field === 'doctorId' ? 'Professional ID * (e.g. MCI-123456)' :
+                       field === 'yearsOfExperience' ? 'Years of Experience *' :
+                       field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
+                    </label>
+                    <input
+                      type={field.toLowerCase().includes('password') ? 'password' : field === 'yearsOfExperience' ? 'number' : 'text'}
+                      value={(drForm as any)[field]}
+                      onChange={e => setDrForm(prev => ({ ...prev, [field]: e.target.value }))}
+                      className={`w-full px-4 py-3 rounded-2xl border-2 font-semibold text-gray-700 ${drErrors[field] ? 'border-red-400' : 'border-gray-100'} bg-gray-50`}
+                      placeholder={field === 'email' ? 'your@hospital.com' : field === 'qualification' ? 'MBBS, MD (Pediatrics)' : ''}
+                    />
+                    {drErrors[field] && <p className="text-red-500 text-xs font-bold mt-1">{drErrors[field]}</p>}
+                  </div>
+                ))}
+                <div>
+                  <label className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1 block">Role *</label>
+                  <div className="flex gap-3">
+                    {(['Doctor','Nurse','Therapist'] as const).map(r => (
+                      <button key={r}
+                        onClick={() => setDrForm(prev => ({ ...prev, role: r }))}
+                        className={`flex-1 py-2 rounded-xl font-bold border-2 ${drForm.role === r ? 'bg-purple-100 border-purple-500 text-purple-700' : 'bg-gray-50 border-transparent text-gray-500'}`}
+                      >{r}</button>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    const errs: Record<string, string> = {};
+                    if (!drForm.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) errs.email = 'Invalid email';
+                    if (drForm.password.length < 8) errs.password = 'Min 8 characters';
+                    if (drForm.password !== drForm.confirmPassword) errs.confirmPassword = 'Passwords do not match';
+                    if (!drForm.fullName.trim()) errs.fullName = 'Required';
+                    if (!drForm.doctorId.trim()) errs.doctorId = 'Required';
+                    if (!drForm.specialty.trim()) errs.specialty = 'Required';
+                    if (!drForm.hospital.trim()) errs.hospital = 'Required';
+                    if (!drForm.licenseNumber.trim()) errs.licenseNumber = 'Required';
+                    if (!drForm.yearsOfExperience) errs.yearsOfExperience = 'Required';
+                    if (!drForm.qualification.trim()) errs.qualification = 'Required';
+                    setDrErrors(errs);
+                    if (Object.keys(errs).length > 0) return;
+                    setDrLoading(true);
+                    try {
+                      const uid = await registerDoctor(drForm.email.trim().toLowerCase(), drForm.password, {
+                        doctorId: drForm.doctorId.trim(),
+                        fullName: drForm.fullName.trim(),
+                        role: drForm.role,
+                        specialty: drForm.specialty.trim(),
+                        hospital: drForm.hospital.trim(),
+                        department: drForm.department.trim(),
+                        licenseNumber: drForm.licenseNumber.trim(),
+                        yearsOfExperience: Number(drForm.yearsOfExperience),
+                        qualification: drForm.qualification.trim(),
+                      });
+                      navigateTo('doctor-pending');
+                    } catch (err: any) {
+                      if (err?.code === 'auth/email-already-in-use') {
+                        setDrErrors({ email: 'Email already registered.' });
+                      } else {
+                        setDrErrors({ email: err.message || 'Registration failed.' });
+                      }
+                    } finally {
+                      setDrLoading(false);
+                    }
+                  }}
+                  disabled={drLoading}
+                  className="w-full bg-green-500 text-white font-black py-4 rounded-2xl text-lg hover:bg-green-600 disabled:opacity-60 mt-4"
+                >
+                  {drLoading ? '...' : 'Submit Registration'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'doctor-dashboard':
+        return (
+          <div className="container mx-auto px-4 py-10 max-w-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-purple-700">🩺 Doctor Dashboard</h2>
+                <p className="text-gray-500 font-semibold">{doctor?.role} {doctor?.fullName} • {doctor?.specialty}</p>
+                <p className="text-gray-400 text-sm">{doctor?.hospital}</p>
+              </div>
+              <button onClick={handleSignOut} className="bg-gray-100 text-gray-600 font-bold px-4 py-2 rounded-full text-sm">
+                Sign Out
+              </button>
+            </div>
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
+              <p className="font-bold text-blue-800 mb-1">Professional ID: <span className="text-purple-700">{doctor?.doctorId}</span></p>
+              <p className="text-sm text-blue-600">Share this ID with parents to link their child's records to you.</p>
+            </div>
+            <p className="text-center text-gray-400 mt-6 font-semibold">Assigned patients will appear here once parents link their child to your ID.</p>
+          </div>
+        );
+
+      case 'admin-dashboard':
+        return (
+          <div className="container mx-auto px-4 py-10 max-w-3xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-black text-purple-700">⚙️ Admin Dashboard</h2>
+              <button onClick={handleSignOut} className="bg-gray-100 text-gray-600 font-bold px-4 py-2 rounded-full text-sm">
+                Sign Out
+              </button>
+            </div>
+            <button
+              onClick={async () => {
+                const [pending, approved] = await Promise.all([getPendingDoctors(), getApprovedDoctors()]);
+                setPendingDoctors(pending);
+                setApprovedDoctors(approved);
+              }}
+              className="mb-6 bg-purple-600 text-white font-bold px-6 py-3 rounded-2xl"
+            >🔄 Refresh</button>
+            <h3 className="text-lg font-black text-yellow-600 mb-4">Pending Registrations ({pendingDoctors.length})</h3>
+            {pendingDoctors.length === 0 ? (
+              <p className="text-gray-400 mb-8 font-semibold">No pending registrations.</p>
+            ) : (
+              pendingDoctors.map(doc => (
+                <div key={doc.uid} className="bg-white rounded-2xl p-6 mb-4 shadow border border-gray-100">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <p className="font-black text-gray-800 text-lg">{doc.fullName}</p>
+                      <p className="text-purple-600 font-bold text-sm">{doc.role} • {doc.specialty}</p>
+                    </div>
+                    <span className="bg-yellow-100 text-yellow-700 text-xs font-black px-3 py-1 rounded-full">PENDING</span>
+                  </div>
+                  <p className="text-sm text-gray-500">🏥 {doc.hospital} {doc.department && `• ${doc.department}`}</p>
+                  <p className="text-sm text-gray-500">🪪 License: {doc.licenseNumber}</p>
+                  <p className="text-sm text-gray-500">🎓 {doc.qualification}</p>
+                  <p className="text-sm text-gray-500">📅 {doc.yearsOfExperience} year(s) experience</p>
+                  <p className="text-sm text-gray-500">📧 {doc.email}</p>
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={async () => {
+                        if (!firebaseUid) return;
+                        setAdminActionLoading(doc.uid);
+                        try {
+                          await approveDoctor(doc.uid, firebaseUid);
+                          if (EMAILJS_SERVICE_ID) {
+                            await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_APPROVAL_TEMPLATE, {
+                              to_email: doc.email, to_name: doc.fullName, status: 'approved',
+                            }, EMAILJS_PUBLIC_KEY);
+                          }
+                          const [pending, approved] = await Promise.all([getPendingDoctors(), getApprovedDoctors()]);
+                          setPendingDoctors(pending); setApprovedDoctors(approved);
+                        } finally { setAdminActionLoading(null); }
+                      }}
+                      disabled={adminActionLoading === doc.uid}
+                      className="flex-1 bg-green-500 text-white font-black py-2 rounded-xl hover:bg-green-600 disabled:opacity-60"
+                    >{adminActionLoading === doc.uid ? '...' : '✓ Approve'}</button>
+                    <button
+                      onClick={() => { setRejectTarget(doc.uid); setRejectReason(''); }}
+                      className="flex-1 bg-red-100 text-red-600 font-black py-2 rounded-xl border-2 border-red-200"
+                    >✗ Reject</button>
+                  </div>
+                  {rejectTarget === doc.uid && (
+                    <div className="mt-3">
+                      <textarea
+                        value={rejectReason}
+                        onChange={e => setRejectReason(e.target.value)}
+                        placeholder="Reason for rejection..."
+                        className="w-full border-2 border-red-300 rounded-xl p-3 text-sm font-semibold mb-2"
+                        rows={2}
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setRejectTarget(null)} className="flex-1 bg-gray-100 text-gray-600 font-bold py-2 rounded-xl text-sm">Cancel</button>
+                        <button
+                          onClick={async () => {
+                            if (!rejectReason.trim()) return;
+                            await rejectDoctor(doc.uid, rejectReason.trim());
+                            if (EMAILJS_SERVICE_ID) {
+                              await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_APPROVAL_TEMPLATE, {
+                                to_email: doc.email, to_name: doc.fullName, status: 'rejected', reason: rejectReason,
+                              }, EMAILJS_PUBLIC_KEY);
+                            }
+                            const [pending, approved] = await Promise.all([getPendingDoctors(), getApprovedDoctors()]);
+                            setPendingDoctors(pending); setApprovedDoctors(approved);
+                            setRejectTarget(null);
+                          }}
+                          className="flex-1 bg-red-600 text-white font-black py-2 rounded-xl text-sm"
+                        >Confirm Reject</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+            <h3 className="text-lg font-black text-green-600 mb-4">Approved Doctors ({approvedDoctors.length})</h3>
+            {approvedDoctors.map(doc => (
+              <div key={doc.uid} className="bg-green-50 border border-green-200 rounded-2xl p-4 mb-3">
+                <p className="font-black text-gray-800">{doc.fullName}</p>
+                <p className="text-sm text-gray-500">{doc.role} • {doc.specialty} • {doc.hospital}</p>
+                <p className="text-sm text-gray-500">Patients assigned: {doc.assignedChildIds?.length || 0}</p>
+              </div>
+            ))}
+          </div>
+        );
+
       case 'welcome':
         return (
           <div className="container mx-auto px-4 py-10 text-center">
@@ -328,7 +851,7 @@ const App: React.FC = () => {
                 onClick={() => navigateTo('login')}
                 className="bg-[#FF9F1C] hover:bg-orange-400 text-white font-black text-2xl px-12 py-6 rounded-[2.5rem] transition-all hover:scale-110 active:scale-95 kids-button-shadow min-w-[280px] flex items-center justify-center gap-4 group"
               >
-                LET'S PLAY! <span className="group-hover:translate-x-2 transition-transform">🚀</span>
+                GET STARTED <span className="group-hover:translate-x-2 transition-transform">🚀</span>
               </button>
               <button
                 onClick={() => navigateTo('help')}
@@ -342,38 +865,63 @@ const App: React.FC = () => {
 
       case 'login':
         return (
-          <div className="container mx-auto px-4 py-20 text-center animate-pop-in">
-            <h2 className="text-5xl font-black text-purple-700 mb-4">Welcome Back!</h2>
-            <p className="text-2xl text-purple-400 font-bold mb-16">Who is logging in today?</p>
+          <div className="min-h-screen bg-[#FFF9E6] flex flex-col items-center justify-center px-4 py-16 animate-pop-in">
+            {/* Header */}
+            <div className="text-center mb-12">
+              <div className="text-7xl mb-4">🌟</div>
+              <h2 className="text-5xl font-black text-purple-700 mb-3">Welcome!</h2>
+              <p className="text-xl text-purple-400 font-bold">Are you a Parent or a Healthcare Professional?</p>
+            </div>
 
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              <button
-                onClick={() => handleRoleSelection('child')}
-                className="bg-white p-12 rounded-[4rem] kids-shadow border-4 border-transparent hover:border-blue-400 group transition-all"
-              >
-                <div className="text-8xl mb-6 bg-blue-100 w-32 h-32 rounded-3xl flex items-center justify-center mx-auto group-hover:rotate-12 transition-transform">🎮</div>
-                <h3 className="text-3xl font-black text-blue-600">Child</h3>
-                <p className="text-gray-500 font-bold mt-2">I want to play games!</p>
-              </button>
-
+            {/* Two role cards */}
+            <div className="grid md:grid-cols-2 gap-8 w-full max-w-3xl">
+              {/* Parent card */}
               <button
                 onClick={() => handleRoleSelection('parent')}
-                className="bg-white p-12 rounded-[4rem] kids-shadow border-4 border-transparent hover:border-purple-400 group transition-all"
+                className="bg-white p-12 rounded-[3rem] border-4 border-purple-100 hover:border-purple-400 hover:scale-105 transition-all shadow-xl group text-left"
               >
-                <div className="text-8xl mb-6 bg-purple-100 w-32 h-32 rounded-3xl flex items-center justify-center mx-auto group-hover:rotate-12 transition-transform">❤️</div>
-                <h3 className="text-3xl font-black text-purple-600">Parent</h3>
-                <p className="text-gray-500 font-bold mt-2">Manage child profile</p>
+                <div className="text-7xl mb-6 bg-purple-100 w-28 h-28 rounded-3xl flex items-center justify-center group-hover:rotate-6 transition-transform">
+                  ❤️
+                </div>
+                <h3 className="text-3xl font-black text-purple-700 mb-3">I'm a Parent</h3>
+                <p className="text-gray-500 font-semibold text-base leading-relaxed">
+                  Log in to view your child's progress dashboard and play assessment games together.
+                </p>
+                <div className="mt-6 flex items-center gap-2 text-purple-600 font-black text-sm">
+                  <span>Get Started</span>
+                  <span className="group-hover:translate-x-2 transition-transform">→</span>
+                </div>
               </button>
 
+              {/* Doctor card */}
               <button
                 onClick={() => handleRoleSelection('doctor')}
-                className="bg-white p-12 rounded-[4rem] kids-shadow border-4 border-transparent hover:border-green-400 group transition-all"
+                className="bg-white p-12 rounded-[3rem] border-4 border-green-100 hover:border-green-400 hover:scale-105 transition-all shadow-xl group text-left"
               >
-                <div className="text-8xl mb-6 bg-green-100 w-32 h-32 rounded-3xl flex items-center justify-center mx-auto group-hover:rotate-12 transition-transform">🩺</div>
-                <h3 className="text-3xl font-black text-green-600">Doctor</h3>
-                <p className="text-gray-500 font-bold mt-2">Analyze health data</p>
+                <div className="text-7xl mb-6 bg-green-100 w-28 h-28 rounded-3xl flex items-center justify-center group-hover:rotate-6 transition-transform">
+                  🩺
+                </div>
+                <h3 className="text-3xl font-black text-green-700 mb-3">I'm a Doctor</h3>
+                <p className="text-gray-500 font-semibold text-base leading-relaxed">
+                  Log in as a registered healthcare professional to access assigned patient records and clinical assessments.
+                </p>
+                <div className="mt-6 flex items-center gap-2 text-green-600 font-black text-sm">
+                  <span>Get Started</span>
+                  <span className="group-hover:translate-x-2 transition-transform">→</span>
+                </div>
               </button>
             </div>
+
+            <p className="text-gray-400 font-semibold text-sm mt-10">
+              New here?{' '}
+              <button onClick={() => navigateTo('onboarding-parent')} className="text-purple-600 underline font-bold">
+                Create a parent account
+              </button>
+              {' '}or{' '}
+              <button onClick={() => navigateTo('doctor-register')} className="text-green-600 underline font-bold">
+                register as a professional
+              </button>
+            </p>
           </div>
         );
 
@@ -383,13 +931,10 @@ const App: React.FC = () => {
           if (!isValidName(parent.name))   errs.name     = 'Please enter your full name (at least 2 letters).';
           if (!isValidEmail(parent.email)) errs.email    = 'Please enter a valid email address.';
           if (!parentPassword)             errs.password = 'Please create a password to protect this profile.';
-          else if (parentPassword.length < 4) errs.password = 'Password must be at least 4 characters.';
+          else if (parentPassword.length < 6) errs.password = 'Password must be at least 6 characters.';
           setParentErrors(errs);
           if (Object.keys(errs).length === 0) {
-            localStorage.setItem(PARENT_CREDENTIALS_KEY, JSON.stringify({
-              name: parent.name, email: parent.email, password: parentPassword
-            }));
-            navigateTo('onboarding-child');
+            handleParentRegister();
           }
         };
         return (
@@ -458,7 +1003,10 @@ const App: React.FC = () => {
           if (child.isPremature && (child.gestationalAgeWeeks < 22 || child.gestationalAgeWeeks > 36))
             errs.gestationalAge = 'Gestational age must be between 22 and 36 weeks.';
           setChildErrors(errs);
-          if (Object.keys(errs).length === 0) navigateTo('results');
+          if (Object.keys(errs).length === 0) {
+            handleChildSave();
+            navigateTo('results');
+          }
         };
         return (
           <div className="max-w-3xl mx-auto py-10 px-4 animate-pop-in">
@@ -858,12 +1406,50 @@ const App: React.FC = () => {
                     🎮 Play Discovery Games
                   </button>
 
+                  {/* Weekly Report */}
+                  <button
+                    onClick={handleSendWeeklyReport}
+                    className="w-full bg-blue-500 text-white py-4 rounded-[2rem] font-black text-base hover:bg-blue-600 transition-all"
+                  >
+                    📧 Send Weekly Report
+                  </button>
+
+                  {/* Link to Doctor */}
+                  <div className="bg-white rounded-[2rem] border-2 border-slate-100 p-4 shadow">
+                    <p className="text-slate-700 font-black text-sm mb-2">🩺 Link to Doctor</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={doctorIdInput}
+                        onChange={e => { setDoctorIdInput(e.target.value); setDoctorLinkError(''); }}
+                        placeholder="Enter doctor's professional ID"
+                        className="flex-1 px-4 py-3 rounded-2xl bg-gray-50 border-2 border-transparent focus:border-purple-300 outline-none font-semibold text-gray-700 text-sm"
+                      />
+                      <button
+                        onClick={handleFindAndLinkDoctor}
+                        disabled={doctorLinkLoading}
+                        className="bg-green-500 text-white px-4 py-3 rounded-2xl font-black text-sm hover:bg-green-600 disabled:opacity-60"
+                      >
+                        {doctorLinkLoading ? '...' : 'Link'}
+                      </button>
+                    </div>
+                    {doctorLinkError && <p className="text-red-500 text-xs font-bold mt-1">{doctorLinkError}</p>}
+                  </div>
+
                   {/* Update Profile */}
                   <button
-                    onClick={() => { setReAuthInput(''); setReAuthError(''); setShowReAuthModal(true); }}
+                    onClick={() => navigateTo('onboarding-child')}
                     className="w-full bg-purple-100 text-purple-700 py-4 rounded-[2rem] font-black text-base hover:bg-purple-200 transition-all"
                   >
                     ⚙️ Update Profile
+                  </button>
+
+                  {/* Sign Out */}
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full bg-gray-100 text-gray-500 py-3 rounded-[2rem] font-black text-sm hover:bg-gray-200 transition-all"
+                  >
+                    Sign Out
                   </button>
                 </div>
               </div>
@@ -906,7 +1492,7 @@ const App: React.FC = () => {
               <div className="flex gap-4">
                 {role === 'parent' && (
                   <button
-                    onClick={() => { setReAuthInput(''); setReAuthError(''); setShowReAuthModal(true); }}
+                    onClick={() => navigateTo('onboarding-child')}
                     className="bg-purple-600 text-white px-10 py-4 rounded-[2rem] font-black text-xl hover:bg-purple-500 transition-all kids-button-shadow"
                   >
                     ⚙️ Update Profile
@@ -1294,17 +1880,12 @@ const App: React.FC = () => {
   };
 
   const navItems = [
-    { id: 'welcome', label: 'Dashboard', roles: ['parent'] },
-    { id: 'assessment', label: 'Assessment', roles: ['child'] },
-    { id: 'results', label: 'Results', roles: ['parent', 'doctor'] },
-    { id: 'help', label: 'Help', roles: ['child', 'parent', 'doctor'] }
+    { id: 'results', label: 'Dashboard', roles: ['parent'] },
+    { id: 'assessment', label: 'Play Games', roles: ['parent'] },
+    { id: 'doctor-dashboard', label: 'Dashboard', roles: ['doctor'] },
+    { id: 'help', label: 'Help', roles: ['parent', 'doctor'] }
   ].filter(item => {
-    if (!role) {
-      return item.id === 'welcome' || item.id === 'help';
-    }
-    if (role === 'parent' && item.id === 'assessment') {
-      return false;
-    }
+    if (!role) return false;
     return item.roles.includes(role);
   });
 
@@ -1342,18 +1923,13 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            {role ? (
+            {role && (
               <button
-                onClick={() => { setRole(null); setSection('welcome'); setHistory([]); }}
+                onClick={handleSignOut}
                 className="bg-gray-100 text-gray-500 px-8 py-3 rounded-full font-black text-lg hover:bg-gray-200 transition-all shadow-sm"
               >
-                Log Out
+                Sign Out
               </button>
-            ) : (
-              <>
-                <button onClick={() => navigateTo('login')} className="text-purple-700 font-black text-xl hover:bg-purple-50 px-8 py-3 rounded-full transition-all">Log In</button>
-                <button onClick={() => navigateTo('login')} className="bg-purple-600 text-white px-10 py-3 rounded-full font-black text-xl hover:bg-purple-500 transition-all shadow-lg active:scale-95">Sign Up</button>
-              </>
             )}
           </div>
         </div>
@@ -1408,40 +1984,37 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* ── Parent Login Modal ─────────────────────────────────────────── */}
+      {/* ── Parent / Doctor Login Modal ─────────────────────────────────── */}
       {showParentLoginModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-[3rem] p-10 shadow-2xl border-4 border-purple-100 w-full max-w-sm mx-4 animate-pop-in">
             <div className="text-center mb-6">
-              <div className="text-6xl mb-3">🔐</div>
-              <h3 className="text-2xl font-black text-purple-700">Parent Login</h3>
-              <p className="text-slate-500 font-bold text-sm mt-1">Welcome back! Enter your credentials to access the dashboard.</p>
+              <div className="text-6xl mb-3">{role === 'doctor' ? '🩺' : '🔐'}</div>
+              <h3 className="text-2xl font-black text-purple-700">
+                {role === 'doctor' ? 'Professional Login' : 'Parent Login'}
+              </h3>
+              <p className="text-slate-500 font-bold text-sm mt-1">
+                Enter your credentials to access the dashboard.
+              </p>
             </div>
             <div className="space-y-4">
               <input
                 type="email"
                 autoFocus
                 className="w-full p-5 rounded-[2rem] bg-gray-50 border-4 border-transparent focus:border-purple-300 outline-none text-gray-900 font-bold text-lg"
-                placeholder="Your email address"
+                placeholder="Email address"
                 value={loginEmail}
                 onChange={e => { setLoginEmail(e.target.value); setLoginError(''); }}
               />
               <input
                 type="password"
                 className={`w-full p-5 rounded-[2rem] bg-gray-50 border-4 outline-none text-gray-900 font-bold text-lg ${loginError ? 'border-red-400' : 'border-transparent focus:border-purple-300'}`}
-                placeholder="Your password"
+                placeholder="Password"
                 value={loginPassword}
                 onChange={e => { setLoginPassword(e.target.value); setLoginError(''); }}
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
-                    const stored = localStorage.getItem(PARENT_CREDENTIALS_KEY);
-                    if (!stored) { setLoginError('No account found. Please register.'); return; }
-                    const creds = JSON.parse(stored);
-                    if (loginEmail.trim().toLowerCase() !== creds.email.toLowerCase()) { setLoginError('Email does not match.'); return; }
-                    if (loginPassword !== creds.password) { setLoginError('Incorrect password.'); return; }
-                    setParent(prev => ({ ...prev, name: creds.name, email: creds.email }));
-                    setShowParentLoginModal(false);
-                    navigateTo('results');
+                    role === 'doctor' ? handleDoctorLogin() : handleParentLogin();
                   }
                 }}
               />
@@ -1455,30 +2028,33 @@ const App: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  const stored = localStorage.getItem(PARENT_CREDENTIALS_KEY);
-                  if (!stored) { setLoginError('No account found. Please register.'); return; }
-                  const creds = JSON.parse(stored);
-                  if (loginEmail.trim().toLowerCase() !== creds.email.toLowerCase()) { setLoginError('Email does not match.'); return; }
-                  if (loginPassword !== creds.password) { setLoginError('Incorrect password.'); return; }
-                  setParent(prev => ({ ...prev, name: creds.name, email: creds.email }));
-                  setShowParentLoginModal(false);
-                  navigateTo('results');
-                }}
-                className="flex-1 py-4 rounded-[2rem] bg-purple-600 text-white font-black text-lg hover:bg-purple-500 transition-all"
+                onClick={() => role === 'doctor' ? handleDoctorLogin() : handleParentLogin()}
+                className={`flex-1 py-4 rounded-[2rem] ${role === 'doctor' ? 'bg-green-500' : 'bg-purple-600'} text-white font-black text-lg transition-all`}
               >
                 Login
               </button>
             </div>
-            <p className="text-center text-slate-400 text-xs font-bold mt-4">
-              New user?{' '}
-              <button
-                onClick={() => { setShowParentLoginModal(false); navigateTo('onboarding-parent'); }}
-                className="text-purple-600 underline"
-              >
-                Register here
-              </button>
-            </p>
+            {role === 'doctor' ? (
+              <p className="text-center text-slate-400 text-xs font-bold mt-4">
+                New professional?{' '}
+                <button
+                  onClick={() => { setShowParentLoginModal(false); navigateTo('doctor-register'); }}
+                  className="text-green-600 underline"
+                >
+                  Register here
+                </button>
+              </p>
+            ) : (
+              <p className="text-center text-slate-400 text-xs font-bold mt-4">
+                New user?{' '}
+                <button
+                  onClick={() => { setShowParentLoginModal(false); navigateTo('onboarding-parent'); }}
+                  className="text-purple-600 underline"
+                >
+                  Register here
+                </button>
+              </p>
+            )}
           </div>
         </div>
       )}

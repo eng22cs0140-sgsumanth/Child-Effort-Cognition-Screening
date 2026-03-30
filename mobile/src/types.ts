@@ -1,5 +1,5 @@
 
-export type UserRole = 'child' | 'parent' | 'doctor';
+export type UserRole = 'child' | 'parent' | 'doctor' | 'admin';
 
 export interface ParentProfile {
   name: string;
@@ -31,11 +31,39 @@ export interface ChildProfile {
 
   // Physical metrics
   bloodGroup: string;
-  height: number;
-  weight: number;
-  bmi: number;
+  height: number;   // cm
+  weight: number;   // kg
+  bmi: number;      // auto-calculated
 
   observations: Observation[];
+}
+
+export interface DoctorProfile {
+  uid: string;
+  email: string;
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+
+  // Professional identity
+  doctorId: string;
+  fullName: string;
+  role: 'Doctor' | 'Nurse' | 'Therapist';
+
+  // Specialization
+  specialty: string;
+  hospital: string;
+  department: string;
+  licenseNumber: string;
+  yearsOfExperience: number;
+  qualification: string;
+
+  // Access control
+  assignedChildIds: string[];
+
+  // Timestamps
+  createdAt: number;
+  approvedAt?: number;
+  approvedBy?: string;
 }
 
 export interface TapEvent {
@@ -58,15 +86,15 @@ export interface BehavioralMetrics {
   // --- Tap tracking ---
   totalTapCount: number;
   emptySpaceTapCount: number;
-  consecutiveEmptySpaceTaps: number;    // Max run of consecutive empty-space taps
-  impulsiveTapCount: number;            // Taps with reactionTime < 200ms
-  tapEventLog: TapEvent[];              // Full ordered tap log
+  consecutiveEmptySpaceTaps: number;
+  impulsiveTapCount: number;
+  tapEventLog: TapEvent[];
 
   // --- Within-session emotional variability ---
-  withinSessionDegradation: number;     // (first_half_acc - second_half_acc) / max(first_half_acc, 1) [0-1]
-  frustrationBurstCount: number;        // Count of runs of ≥3 consecutive incorrect+empty taps
-  engagementDropRate: number;           // (peak_engagement - final_engagement) / max(peak_engagement, 1) [0-1]
-  reactionTimeSpikeCount: number;       // Count of RTs > 3× session average
+  withinSessionDegradation: number;
+  frustrationBurstCount: number;
+  engagementDropRate: number;
+  reactionTimeSpikeCount: number;
 }
 
 export interface SessionData {
@@ -82,6 +110,26 @@ export interface GameResult {
   timestamp: number;
   behavioralMetrics?: BehavioralMetrics;
   sessionNumber?: number;
+}
+
+// A single assessment visit (multiple games in one week)
+export interface AssessmentSession {
+  id: string;
+  date: number;
+  results: GameResult[];
+  sessionAccuracy: number;
+  sessionNumber?: number;
+  weekKey?: string;
+}
+
+// Six neuropsychological domain indices
+export interface DomainIndices {
+  VMI: number;  // Visual-Motor Integration   [maze, numbersequencer]
+  FRI: number;  // Fluid Reasoning Index       [memory, counting]
+  LCI: number;  // Language Comprehension Index [sound]
+  IFI: number;  // Inhibitory Function Index   [simon, category]
+  API: number;  // Attention Processing Index  [catcher]
+  ATI: number;  // Attention-Task Integration  [leader, emotion]
 }
 
 export type GameType =
@@ -149,7 +197,7 @@ export interface CECIScore {
   temporalScore: number;
   bayesianCalibration: number;
   recommendation: string;
-  // Flask API fields (optional for backward compat):
+  // Flask API fields (optional):
   pid?: number;
   peff?: number;
   uncertainty?: number;
@@ -159,8 +207,8 @@ export interface CECIScore {
   nSessions?: number;
   // 3-way classification:
   primaryClassification?: PrimaryClassification;
-  emotionalVariabilityScore?: number;   // 0-100 (EVI × 100)
-  effortVariabilityScore?: number;      // 0-100
+  emotionalVariabilityScore?: number;
+  effortVariabilityScore?: number;
 }
 
 export interface ModelOutputs {

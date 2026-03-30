@@ -16,6 +16,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useApp } from '../context/AppContext';
 import { COLORS } from '../constants';
+import { createChildProfile, updateChildProfile } from '../services/firebaseService';
 
 type NavProp = StackNavigationProp<RootStackParamList, 'OnboardingChild'>;
 
@@ -23,7 +24,7 @@ const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 export default function OnboardingChildScreen() {
   const navigation = useNavigation<NavProp>();
-  const { child, setChild, calculateAge, calculateBMI } = useApp();
+  const { child, childId, setChild, setChildId, firebaseUid, calculateAge, calculateBMI } = useApp();
 
   const [name, setName] = useState(child.name);
   const [dob, setDob] = useState(child.dob);
@@ -64,7 +65,7 @@ export default function OnboardingChildScreen() {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    setChild({
+    const updatedChild = {
       ...child,
       name: name.trim(),
       dob,
@@ -78,7 +79,27 @@ export default function OnboardingChildScreen() {
       height: heightNum,
       weight: weightNum,
       bmi,
-    });
+    };
+
+    setChild(updatedChild);
+
+    // Sync to Firestore
+    if (firebaseUid) {
+      try {
+        if (childId) {
+          // Update existing child document
+          await updateChildProfile(childId, updatedChild);
+        } else {
+          // Create new child document
+          const { observations, ...childData } = updatedChild;
+          const newChildId = await createChildProfile(firebaseUid, childData);
+          setChildId(newChildId);
+        }
+      } catch (e) {
+        console.warn('Firestore child save failed (offline?):', e);
+      }
+    }
+
     navigation.navigate('Results');
   };
 

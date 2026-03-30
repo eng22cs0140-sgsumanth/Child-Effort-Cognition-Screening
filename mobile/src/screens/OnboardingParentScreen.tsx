@@ -11,26 +11,26 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useApp } from '../context/AppContext';
 import { COLORS } from '../constants';
+import { registerParent } from '../services/firebaseService';
 
 type NavProp = StackNavigationProp<RootStackParamList, 'OnboardingParent'>;
 
-export const PARENT_CREDS_KEY = 'ceci_parent_credentials';
-
 export default function OnboardingParentScreen() {
   const navigation = useNavigation<NavProp>();
-  const { parent, setParent } = useApp();
+  const { parent, setParent, setRole } = useApp();
   const [name, setName] = useState(parent.name);
   const [email, setEmail] = useState(parent.email);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirm?: string }>({});
+  const [loading, setLoading] = useState(false);
 
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
   const isValidName = (n: string) => n.trim().length >= 2 && /[a-zA-Z]/.test(n);
@@ -39,20 +39,32 @@ export default function OnboardingParentScreen() {
     const errs: typeof errors = {};
     if (!isValidName(name)) errs.name = 'Please enter your full name (at least 2 letters).';
     if (!isValidEmail(email)) errs.email = 'Please enter a valid email address.';
-    if (!password || password.length < 4) errs.password = 'Password must be at least 4 characters.';
+    if (!password || password.length < 6) errs.password = 'Password must be at least 6 characters.';
     if (password !== confirmPassword) errs.confirm = 'Passwords do not match.';
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
+    setLoading(true);
     try {
-      await AsyncStorage.setItem(PARENT_CREDS_KEY, JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), password }));
-    } catch (e) {
-      Alert.alert('Error', 'Could not save credentials. Please try again.');
-      return;
+      await registerParent(email.trim().toLowerCase(), password, {
+        name: name.trim(),
+        relationship: '',
+      });
+      setParent({ ...parent, name: name.trim(), email: email.trim().toLowerCase() });
+      setRole('parent');
+      navigation.navigate('OnboardingChild');
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/email-already-in-use') {
+        Alert.alert('Email In Use', 'An account with this email already exists. Please log in instead.');
+      } else if (code === 'auth/invalid-email') {
+        setErrors((e) => ({ ...e, email: 'Invalid email address.' }));
+      } else {
+        Alert.alert('Registration Failed', err.message || 'Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
-
-    setParent({ ...parent, name: name.trim(), email: email.trim() });
-    navigation.navigate('OnboardingChild');
   };
 
   return (
@@ -124,11 +136,16 @@ export default function OnboardingParentScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.btn}
+              style={[styles.btn, loading && { opacity: 0.7 }]}
               onPress={handleContinue}
               activeOpacity={0.85}
+              disabled={loading}
             >
-              <Text style={styles.btnText}>Continue to Child Setup ➜</Text>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.btnText}>Continue to Child Setup ➜</Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>

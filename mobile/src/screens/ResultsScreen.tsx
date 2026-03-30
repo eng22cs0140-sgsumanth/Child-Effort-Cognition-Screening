@@ -22,9 +22,8 @@ import Svg, {
   LinearGradient,
   Stop,
 } from 'react-native-svg';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -32,7 +31,11 @@ import { useApp } from '../context/AppContext';
 import { useCECICalculation } from '../hooks/useCECICalculation';
 import { calculateCECI } from '../ceciAlgorithm';
 import { COLORS } from '../constants';
-import { PARENT_CREDS_KEY } from './OnboardingParentScreen';
+import {
+  findDoctorByProfessionalId,
+  assignChildToDoctor,
+  signOut as firebaseSignOut,
+} from '../services/firebaseService';
 
 type NavProp = StackNavigationProp<RootStackParamList, 'Results'>;
 
@@ -186,35 +189,43 @@ function MiniLineChart({ data }: MiniLineChartProps) {
 
 export default function ResultsScreen() {
   const navigation = useNavigation<NavProp>();
-  const { child, role, results, resetApp, addObservation, clearResults } = useApp();
+  const { child, childId, role, parent, results, resetApp, addObservation, clearResults, signOut } = useApp();
   const [diaryOpen, setDiaryOpen] = useState(false);
   const [diaryInput, setDiaryInput] = useState('');
 
-  // ── Parent Re-Auth modal state ──────────────────────────────────────────
-  const [reAuthOpen, setReAuthOpen] = useState(false);
-  const [reAuthPassword, setReAuthPassword] = useState('');
-  const [reAuthError, setReAuthError] = useState('');
+  // ── Doctor Linkage ────────────────────────────────────────────────────
+  const [doctorLinkOpen, setDoctorLinkOpen] = useState(false);
+  const [doctorIdInput, setDoctorIdInput] = useState('');
+  const [doctorLinkLoading, setDoctorLinkLoading] = useState(false);
+  const [doctorLinkError, setDoctorLinkError] = useState('');
 
-  const handleUpdateProfile = () => {
-    setReAuthPassword('');
-    setReAuthError('');
-    setReAuthOpen(true);
+  const handleFindAndLinkDoctor = async () => {
+    if (!doctorIdInput.trim()) { setDoctorLinkError('Enter a doctor professional ID.'); return; }
+    if (!childId) { setDoctorLinkError('Child profile not saved yet.'); return; }
+    setDoctorLinkLoading(true);
+    setDoctorLinkError('');
+    try {
+      const doc = await findDoctorByProfessionalId(doctorIdInput.trim());
+      if (!doc) { setDoctorLinkError('No approved doctor found with that ID.'); return; }
+      await assignChildToDoctor(childId, doc.uid);
+      setDoctorLinkOpen(false);
+      Alert.alert('Doctor Linked!', `${child.name} is now linked to ${doc.role} ${doc.fullName} at ${doc.hospital}.`);
+    } catch {
+      setDoctorLinkError('Failed to link. Please try again.');
+    } finally {
+      setDoctorLinkLoading(false);
+    }
   };
 
-  const handleReAuthConfirm = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(PARENT_CREDS_KEY);
-      if (!stored) { navigation.navigate('OnboardingChild'); setReAuthOpen(false); return; }
-      const creds = JSON.parse(stored);
-      if (reAuthPassword !== creds.password) {
-        setReAuthError('Incorrect password. Please try again.');
-        return;
-      }
-      setReAuthOpen(false);
-      navigation.navigate('OnboardingChild');
-    } catch {
-      setReAuthError('Verification failed. Please try again.');
-    }
+  // ── Sign out ──────────────────────────────────────────────────────────
+  const handleSignOut = async () => {
+    await signOut();
+    navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Welcome' }] }));
+  };
+
+  // ── Navigate to update child profile ─────────────────────────────────
+  const handleUpdateProfile = () => {
+    navigation.navigate('OnboardingChild');
   };
 
   // ── PDF generation ──────────────────────────────────────────────────────
@@ -633,10 +644,31 @@ export default function ResultsScreen() {
             <Text style={styles.playGamesBtnText}>🎮  Play Games</Text>
           </TouchableOpacity>
 
+          {/* Download PDF */}
+          <TouchableOpacity
+            style={[styles.playGamesBtn, { backgroundColor: '#3B82F6', marginTop: 12 }]}
+            onPress={handleDownloadPDF}
+            disabled={generatingPdf}
+          >
+            {generatingPdf ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.playGamesBtnText}>📄  Download PDF Report</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Link to Doctor */}
+          <TouchableOpacity
+            style={[styles.playGamesBtn, { backgroundColor: '#22C55E', marginTop: 12 }]}
+            onPress={() => setDoctorLinkOpen(true)}
+          >
+            <Text style={styles.playGamesBtnText}>🩺  Link to Doctor</Text>
+          </TouchableOpacity>
+
           {/* Log Out */}
           <TouchableOpacity
             style={styles.logoutBtn}
-            onPress={() => { resetApp(); navigation.navigate('Welcome'); }}
+            onPress={handleSignOut}
           >
             <Text style={styles.logoutBtnText}>Log Out</Text>
           </TouchableOpacity>
@@ -695,34 +727,42 @@ export default function ResultsScreen() {
           </View>
         </Modal>
 
-        {/* Re-Auth Modal */}
-        <Modal visible={reAuthOpen} animationType="slide" transparent onRequestClose={() => setReAuthOpen(false)}>
+        {/* Doctor Link Modal */}
+        <Modal visible={doctorLinkOpen} animationType="slide" transparent onRequestClose={() => setDoctorLinkOpen(false)}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>🔐 Verify Identity</Text>
-              <Text style={styles.modalSubtitle}>Enter your password to update the child profile.</Text>
+              <Text style={styles.modalTitle}>🩺 Link to Doctor</Text>
+              <Text style={styles.modalSubtitle}>
+                Enter the professional ID of the doctor/nurse advising your child.
+                They will be able to view {child.name || 'your child'}'s assessment records.
+              </Text>
               <TextInput
-                style={[styles.diaryInput, reAuthError ? { borderColor: '#EF4444' } : null]}
-                value={reAuthPassword}
-                onChangeText={v => { setReAuthPassword(v); setReAuthError(''); }}
-                placeholder="Your password"
+                style={[styles.diaryInput, doctorLinkError ? { borderColor: '#EF4444' } : null]}
+                value={doctorIdInput}
+                onChangeText={v => { setDoctorIdInput(v); setDoctorLinkError(''); }}
+                placeholder="e.g. MCI-123456"
                 placeholderTextColor={COLORS.gray400}
-                secureTextEntry
+                autoCapitalize="none"
                 autoFocus
               />
-              {reAuthError ? <Text style={{ color: '#EF4444', fontSize: 13, fontWeight: '700', marginBottom: 8, marginLeft: 4 }}>⚠ {reAuthError}</Text> : null}
+              {doctorLinkError ? <Text style={{ color: '#EF4444', fontSize: 13, fontWeight: '700', marginBottom: 8, marginLeft: 4 }}>⚠ {doctorLinkError}</Text> : null}
               <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
                 <TouchableOpacity
                   style={[styles.writeBtn, { flex: 1, backgroundColor: COLORS.gray100, borderRadius: 20, paddingVertical: 14 }]}
-                  onPress={() => setReAuthOpen(false)}
+                  onPress={() => setDoctorLinkOpen(false)}
                 >
                   <Text style={{ color: COLORS.gray600, fontWeight: '900', fontSize: 16 }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.writeBtn, { flex: 1, backgroundColor: COLORS.primary, borderRadius: 20, paddingVertical: 14 }]}
-                  onPress={handleReAuthConfirm}
+                  style={[styles.writeBtn, { flex: 1, backgroundColor: '#22C55E', borderRadius: 20, paddingVertical: 14 }, doctorLinkLoading && { opacity: 0.7 }]}
+                  onPress={handleFindAndLinkDoctor}
+                  disabled={doctorLinkLoading}
                 >
-                  <Text style={styles.writeBtnText}>Confirm</Text>
+                  {doctorLinkLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.writeBtnText}>Link</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
